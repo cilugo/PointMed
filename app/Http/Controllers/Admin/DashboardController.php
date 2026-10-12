@@ -32,6 +32,9 @@ class DashboardController extends Controller
         $novos = fn (string $tipo, $de, $ate) => User::where('tipo', $tipo)
             ->whereBetween('created_at', [$de->copy()->startOfDay(), $ate->copy()->endOfDay()])->count();
 
+        $novosUsuarios = $novos('usuario', $inicioMes, $hoje);
+        $variacaoUsuarios = Formatador::variacao($novosUsuarios, $novos('usuario', $inicioMesAnt, $mesPassadoFim));
+
         $clinicas = Clinica::with('user')->get();
         $cnpjsAtivos = BaseCnpj::whereIn('cnpj', $clinicas->pluck('cnpj'))->where('situacao', 'ativa')->count();
 
@@ -55,8 +58,13 @@ class DashboardController extends Controller
                 [
                     'icone' => 'users', 'tom' => 'roxo', 'rotulo' => 'Usuários cadastrados',
                     'valor' => Formatador::numero(User::where('tipo', 'usuario')->whereNull('excluida_em')->count()),
-                    'variacao' => Formatador::variacao($novos('usuario', $inicioMes, $hoje), $novos('usuario', $inicioMesAnt, $mesPassadoFim)),
-                    'nota' => 'cadastros no mês x mês anterior',
+                    'variacao' => $variacaoUsuarios,
+                    // Sem cadastro no mês anterior não há porcentagem (Formatador::variacao
+                    // devolve null): aí a nota mostra o número do mês, senão o cartão
+                    // ficava só com o texto, sem número (12/10/2026).
+                    'nota' => $variacaoUsuarios
+                        ? 'cadastros neste mês x mês anterior'
+                        : $novosUsuarios . ($novosUsuarios === 1 ? ' cadastro neste mês' : ' cadastros neste mês'),
                     'url' => route('admin.usuarios', ['tipo' => 'usuario']),
                 ],
                 [

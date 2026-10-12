@@ -39,7 +39,7 @@ class GarantirAdmin extends Command
         $senha = (string) getenv('ADMIN_PASSWORD');
 
         if ($email === '') {
-            $this->line('FacilMed: ADMIN_EMAIL vazio, nenhuma conta de administrador extra.');
+            $this->line('PointMed: ADMIN_EMAIL vazio, nenhuma conta de administrador extra.');
 
             return self::SUCCESS;
         }
@@ -47,8 +47,8 @@ class GarantirAdmin extends Command
         $existente = User::where('email', $email)->first();
         if ($existente) {
             $this->line($existente->ehAdmin()
-                ? "FacilMed: administrador {$email} já existe (nada mudou)."
-                : "FacilMed: AVISO - {$email} já é uma conta de outro tipo ({$existente->tipo}); nenhum administrador criado.");
+                ? "PointMed: administrador {$email} já existe (nada mudou)."
+                : "PointMed: AVISO - {$email} já é uma conta de outro tipo ({$existente->tipo}); nenhum administrador criado.");
 
             return self::SUCCESS;
         }
@@ -58,7 +58,7 @@ class GarantirAdmin extends Command
             'password' => ['required', SenhaPadrao::regra()],
         ]);
         if ($validacao->fails()) {
-            $this->warn('FacilMed: AVISO - administrador não criado: ' . implode(' ', $validacao->errors()->all()));
+            $this->warn('PointMed: AVISO - administrador não criado: ' . implode(' ', $validacao->errors()->all()));
 
             return self::SUCCESS;
         }
@@ -72,7 +72,7 @@ class GarantirAdmin extends Command
         ]);
         $user->forceFill(['email_verified_at' => now()])->save();
 
-        $this->info("FacilMed: administrador {$email} criado.");
+        $this->info("PointMed: administrador {$email} criado.");
 
         return self::SUCCESS;
     }

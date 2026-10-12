@@ -179,7 +179,8 @@ Render é apagado depois de 30 dias.
    *Running*, na página do serviço copie o **Service URI** (`mysql://avnadmin:...`) e, em
    *CA certificate*, clique em **Show** e copie o texto inteiro (de `-----BEGIN` até `END-----`).
 2. **Render** — em render.com, entre com o GitHub → **New → Blueprint** → escolha o repositório
-   `cilugo/FacilMed` (se não aparecer, clique em *Configure GitHub* e libere o acesso). O Render lê o
+   `cilugo/PointMed` (era `cilugo/FacilMed`; o GitHub redireciona o nome antigo. Se não aparecer, clique em
+   *Configure GitHub* e libere o acesso). O Render lê o
    `render.yaml` e pede 3 valores:
    - `APP_KEY`: a chave do Laravel (`base64:...`). Gerar: `php artisan key:generate --show`.
    - `DB_URL`: o *Service URI* do Aiven.
@@ -318,7 +319,7 @@ FacilMed/                  ← a pasta continua com o nome antigo (ver o aviso n
 ├── lang/pt_BR/            ← mensagens em português
 ├── config/                ← configurações (navegacao.php = menus,
 │                             localizacao.php = coordenadas aproximadas das cidades)
-├── tests/Feature/         ← 152 testes automáticos
+├── tests/Feature/         ← 154 testes automáticos
 ├── storage/               ← logs e cache (gerado)
 ├── design/                ← prints e protótipos de tela (referência visual)
 └── prototipo-antigo/      ← versão antiga em PHP puro (não usada pelo sistema)
@@ -429,7 +430,7 @@ distância            → linha reta (Haversine, App\Support\Localizacao), calcu
 
 ### 5.7 Testes automáticos
 
-`php artisan test` → **152 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
+`php artisan test` → **154 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
 distância, CEP com raio, avaliações, clínica (médicos, unidades, convênios), admin, exclusão de
 conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no banco
 `facilmed_testes` (criado sozinho), **nunca** no `facilmed`. Os de foto precisam da extensão
@@ -442,7 +443,52 @@ conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no b
 > Esta seção é a "passagem de bastão" entre quem trabalha no projeto (pessoas e IAs).
 > **Atualize ao terminar cada etapa.**
 
-**Atualizado em 12/10/2026.**
+**Atualizado em 12/10/2026 (noite).**
+
+**Pendências até a entrega (12/10, depois da revisão geral):**
+1. **⚠ Site no ar sem senha de demonstração.** O log do boot de 12/10 diz que a `DEMO_PASSWORD` está
+   vazia no Render: as 9 contas do seed (admin, 6 clínicas, Ana, Marcos) ficaram com senha aleatória e
+   ninguém entra nelas; o `ADMIN_EMAIL` também está vazio (não há admin extra). Criar a `DEMO_PASSWORD`
+   no painel do Render (Environment) e publicar de novo (aba Actions → **Run workflow**). Conferir
+   também `BREVO_API_KEY` e `MAIL_FROM_ADDRESS` (sem eles o "Esqueci minha senha" só vai para o log).
+2. **Decisões do grupo:** tirar ou não o "Médicos, clínicas e convênios são fictícios" do rodapé (os
+   avisos de convênio fictício/sem contrato com operadora são **obrigatórios**, AGENTS §3); as fotos e
+   legendas do carrossel da home; trazer ou não o que ficou de fora em 08/10 (admin com telas separadas
+   de contas ativas/bloqueadas/excluídas — hoje é o filtro de status em Usuários —, galeria e site do
+   local, barra Início/Perfil no celular). De 16/10 em diante não se constrói nada novo.
+3. **Branches:** todas as do GitHub já estão na `main` ou foram superadas (`front/home-nova` foi
+   absorvida pela home atual; `claude/compassionate-cori-dnjhvu` pela `integracao/pointmed`;
+   `setup/ambiente-laravel` é de 20/09). Podem ser apagadas depois de o grupo concordar.
+4. Ensaio da apresentação com as contas do §3 (16–20/10).
+
+**12/10 (noite) — revisão geral: textos, cartões e limpeza** (feito com o Claude, branch
+`revisao/12-10-pendencias`, a partir da `main` `4a6f137`; pedido do Sidney: "olha todo o projeto e vê
+o que falta"). Antes de mexer: `migrate:fresh --seed` limpo, 152 testes passando e ~250 páginas abertas
+no navegador com as 4 visões (visitante, usuário, clínica, admin), no computador e no celular — nenhum
+erro 500, nada passando da largura no celular, nenhuma imagem quebrada. No site no ar, nenhum erro 500
+na última semana.
+- **Home:** o contador "médicos verificados" virou **"médicos com CRM conferido"** — era o único texto
+  público que dava a entender uma verificação de verdade (AGENTS §3).
+- **Início do admin:** o cartão "Usuários cadastrados" mostrava só "cadastros no mês x mês anterior",
+  sem número, quando ninguém se cadastrou no mês anterior (na demonstração é sempre assim). Agora mostra
+  "2 cadastros neste mês"; com cadastro no mês anterior, continua a porcentagem. 2 testes novos no
+  `TelasAdminTest`.
+- **Início da clínica:** no cartão "Unidades" o nome da unidade ficava espremido numa coluna de 84 px
+  e a etiqueta da nota ocupava o resto. A regra `.fm-linha--nota` estava só no `crud.css`, que essa
+  tela não carrega; foi também para o `painel.css`.
+- **Seed:** a descrição da Aurora dizia "agenda estendida" (sobra do agendamento) → "atendimento em
+  horário estendido". Mensagens do boot do Render: "FacilMed:" → "PointMed:" (`entrypoint.sh`,
+  `facilmed:garantir-admin`).
+- **Arquivos sem uso apagados:** `public/css/agendamento.css`, `public/imgs/teste.jpg` e
+  `public/imgs/sliderhospcli/` (1,1 MB; a home usa `public/imgs/inst`).
+- **README:** esta lista de pendências; saíram do fim desta seção os blocos de 28–30/09 que descreviam a
+  versão com agendamento; §2.7 com o nome novo do repositório (`cilugo/PointMed`); §10 com o cronograma
+  real. Um teste com nome antigo ("comentário só para o autor…") foi renomeado.
+- **Conferido:** `migrate:fresh --seed` limpo, **154 testes** passando e as telas mexidas abertas no
+  navegador (computador e celular).
+- **Depois de puxar:** `composer run banco-do-zero` (muda a descrição da Aurora no seed) e Ctrl + F5.
+
+**Antes, em 12/10:**
 
 **12/10 — segurança: revisão completa** (feito com o Claude, branch `seguranca/revisao-completa`, a
 partir de `seguranca/vinculo-medico-cpf`; pedido do Sidney: "fazer tudo de uma vez e revisar tudo").
@@ -855,99 +901,11 @@ código); `MedicoTest::especialidades_com_principal...` depende da hora em que r
 
 **Junção de 25/09/2026:** a home que o grupo fez no protótipo depois da organização (slider do início com 9 fotos, fotos dos médicos, "Hospitais e Clínicas" e "Sobre") foi trazida para `resources/views/home.blade.php`, `public/css/home.css` e `public/javas/home.js`; fotos em `public/imgs/` (sliderinicio, medicos, sliderhospcli — estas comprimidas de 10,5 MB para 1 MB). Os 3 médicos fictícios ganharam foto (`foto` em `DadosFicticios::MEDICOS`). O `prototipo-antigo/` também foi atualizado com a versão do GitHub (a home agora é `paginas/index.html`). **27/09:** entrou o commit `c9faffe` (mudanças na home: slider em loop contínuo, menu que marca o item clicado, cores em azul-escuro, novo texto do topo, "Sobre nós" e nova foto `medico5`), no protótipo e na home em Laravel.
 
-**Pronto e testado:**
-- Estrutura: o repositório é o projeto Laravel completo; roda pelo XAMPP (`/FacilMed`) ou `composer run dev`.
-- Banco: 29 migrations, seed completo, travas e índices.
-- Back-end: **todas** as ações de paciente, médico, clínica e admin (nenhum TODO sobrando).
-- Telas: site público (home, busca, perfis), login e cadastros, agendamento completo, todas as
-  telas do paciente, dashboards dos 4 tipos de conta, convênios (admin e clínica).
-- **Telas do médico (28/09):** agenda, meus horários, ausências, onde atendo, preços, avaliações
-  e perfil (com o fluxo da senha provisória).
-- **Telas da clínica (28/09):** agenda (só leitura), meus médicos (com desvínculo confirmado),
-  cadastrar médico, unidades (com edição do horário de funcionamento), tabela de preços (mostra a
-  senha provisória do médico novo uma única vez), avaliações e perfil.
-- **Telas do admin (28/09):** usuários (bloquear com motivo / desbloquear), verificar CRM
-  (histórico + rejeitar; aprovar confere na base simulada), carteirinhas, clínicas e hospitais,
-  especialidades (criar/editar/destaque/desativar) e consultas (filtros, sem observações).
-- **Com isso, as 20 telas da seção 7 estão prontas.** Todo item de menu leva a uma tela.
-- **Revisão geral (28/09):** 8 problemas achados e corrigidos, com teste (ver §11, itens 19–26).
-- **Revisão geral, 2ª rodada (28/09):** mais 3 corrigidos, com teste no `RevisaoTest` (§11, itens
-  27–29). O `AlocadorDeMedico` agora usa a mesma regra `Vinculo::ofereceEspecialidade()`; o
-  duplo envio da avaliação responde "já estava registrada"; a tela da consulta por convênio
-  repete o aviso da recepção. *(Conferida na 3ª rodada: os testes passam.)*
-- **Revisão geral, 3ª rodada (28/09):** mais 10 problemas corrigidos, com teste no
-  `RevisaoRodada3Test` (§11, itens 30–39). Rodado de verdade (PHP + MariaDB e pelo Apache, como no
-  XAMPP): `migrate:fresh --seed` limpo e **128 testes passando**. Decisões tomadas nesta rodada
-  (dá para reverter se o grupo quiser): a **acessibilidade só aparece para o médico** da consulta e só
-  enquanto ela está agendada (a clínica não vê — é o que o AGENTS §3 e o consentimento do cadastro
-  dizem); a **base simulada confere o nome junto com o CRM**.
-- E-mails e lembretes. **170 testes automáticos**, incluindo a `VarreduraTest`, que abre todas as
-  páginas com as 5 visões (visitante, paciente, médico, clínica, admin) e falha se alguma der erro 500.
-
-**Telas internas — o que vale saber (28/09):**
-- Classes novas no fim de `public/css/crud.css` (filtros, agenda, semana, opções, preços,
-  avaliações, paginação). Só usam as variáveis `--fm-*` do `painel.css`.
-- Paginação: `{{ $lista->links('painel.parciais.paginacao') }}`. A padrão do Laravel usa classes
-  do Tailwind, que o projeto não tem — use essa nas telas de admin/clínica também.
-- **Preço digitado** passa por `App\Support\Dinheiro::lerDigitado()`: aceita `250,00`, `1.250,00` e
-  `150.00` (até 28/09 o ponto era apagado e `150.00` virava 15000). Na tela, continue mostrando com vírgula.
-- Senha provisória: o `ExigirTrocaDeSenha` bloqueia todas as outras rotas, então o perfil mostra
-  **só** o formulário de senha até ela ser trocada.
-- Partes reaproveitáveis em `resources/views/painel/parciais/`: `senha` (trocar senha),
-  `horarios-funcionamento` (horários por dia) e `paginacao`.
-- Numa tela com vários formulários iguais (ex.: horário de cada unidade), cada um manda um campo
-  escondido `_form` para o `old()` e os erros voltarem só no formulário certo.
-- `TelasMedicoTest`, `TelasClinicaTest` e `TelasAdminTest` abrem as telas com a view real.
-- **"Pode receber agendamento?"** agora é UMA regra: `Vinculo::recebeAgendamento()` (vínculo e
-  local ativos, médico verificado e com conta ativa, clínica com conta ativa). A
-  `CalculadoraDeHorarios`, a tela de horário e a gravação usam a mesma. Especialidade oferecida
-  num lugar: `Vinculo::ofereceEspecialidade()` (preço ATIVO + especialidade ativa).
-- Nos testes, campo fora do `$fillable` dá erro em vez de sumir em silêncio
-  (`preventSilentlyDiscardingAttributes`, em `tests/TestCase.php`). Campo que não deve vir de
-  formulário (ex.: `motivo_bloqueio`) é gravado com `forceFill()`.
-
-**Próximos passos sugeridos:**
-1. *(Feito em 29/09: `revisao/28-09` e `front/cadastro` já estão na `main`.)* As branches
-   `front/telas-*`, `claude/...`, `revisao/28-09`, `front/cadastro` e `deploy/render` já estão
-   inteiras na `main` e podem ser apagadas no GitHub.
-2. Cada um: **Pull**, `composer install`, `composer run banco-do-zero` e `php artisan test`.
-3. Ensaio da apresentação seguindo as contas do §3 (16–20/10 é só integração e teste).
-
-**Para o grupo olhar (não mexi porque é código de outra pessoa — README §10, regra 6):**
-- *(28/09 a 30/09)* "Cadastros", "Create composer.lock", "sla", "login e cadastro", "Mudanças em
-  visual do cadastro" e "Modificação de dashboard" foram commitados **direto na `main`** (regra 1 do §10). O "sla" apagou o `composer.lock` e derrubou a publicação.
-- A vitrine "Hospitais e Clínicas" da home é uma lista fixa no Blade. O "Hospital Vale Sereno"
-  não existe no sistema, e os endereços das outras três (Santa Clara, Vida Plena, Aurora) são
-  diferentes dos cadastrados no banco. Na banca, procurar a clínica e achar outro endereço pega
-  mal. Sugestão: montar a lista a partir das clínicas do banco (o `HomeController` pode mandar).
-- *(28/09, 2ª rodada)* Contadores do topo da home: "médicos verificados" é o único texto público
-  sem o "conferido na base simulada" (sugestão: "médicos com CRM conferido"; a troca por
-  "verificados pela equipe", sugerida no PR #1, ficou desatualizada em 24/09). E "clínicas e
-  hospitais" conta todos os locais ativos, incluindo consultório próprio de médico e unidade de
-  clínica bloqueada.
-- O protótipo estático do admin (`facilmed_admin_telas.zip`, 26/09) tem "Resultados de exames",
-  status "Em acompanhamento" e idade de paciente — fora do escopo (AGENTS.md §1 e §3). As telas
-  do admin feitas aqui seguem o contrato da seção 7.3.
-
-**Plano do app (PDF de 28/09) — o que já foi decidido (Sidney, 29/09):** cadastro aberto só para
-paciente e clínica (feito); **o agendamento continua** — a tela "médicos disponíveis" leva aos
-horários; **a avaliação continua por consulta realizada**, com comentário privado (AGENTS §3), e a
-nota do local e a do médico saem dessas avaliações. **Feito em 29/09:** busca por distância e
-página do local (§5.6). **Feito em 30/09:** exclusão de conta pelo paciente (LGPD, §5.4). Fora:
-CNES, fotos do local (upload) e comentário público. Com isso, tudo o que foi decidido do plano está feito.
-
-**Pendente de decisão do grupo (28/09):** o PDF "Dashboard da Clínica" tira do menu a tabela
-de preços e o perfil, e pede documentação com upload, resultados de exames, status "remarcada",
-convênio vencido/renovado e unidade "em implantação". Nada disso existe no banco, e exames/upload
-de documento são fora do escopo (AGENTS.md §1). Até o grupo decidir, as telas da clínica seguem
-o contrato da seção 7 (a tabela de preços e o perfil foram mantidos).
-
-**Não reabrir sem motivo** (decisões já testadas):
-- `Consulta::cancelar()` é o ÚNICO jeito de cancelar — ele dispara o e-mail certo.
-- Não criar índice novo começando por `consultas.vinculo_id`: o MariaDB passa a usá-lo na chave
-  estrangeira e o `rollback` quebra.
-- Não mexer no `.htaccess` da raiz sem testar que `http://localhost/FacilMed/.env` dá **403**.
-- Fuso horário é `America/Sao_Paulo` (`config/app.php`); com UTC, "agora" ficava 3h adiantado.
+*(12/10/2026: os blocos "Pronto e testado", "Telas internas — o que vale saber", "Próximos passos",
+"Para o grupo olhar", "Plano do app", "Pendente de decisão" e "Não reabrir sem motivo" de 28–30/09 saíram
+daqui: descreviam a versão com agendamento, consultas, preços e área do médico, que não existe mais
+desde 01/10. Estão no histórico do Git. O que vale hoje está em "Pendências até a entrega", no topo
+desta seção.)*
 
 ---
 
@@ -1085,7 +1043,7 @@ algoritmo; consultar o COMPROVA da ANS; checar horário livre só com SELECT ant
 
 | Pessoa | Frente |
 |---|---|
-| **Sidney** | back-end: serviços de horário e alocação, agendamento, Policies, FormRequests, e-mails |
+| **Sidney** | back-end: regras de negócio, Policies, FormRequests, busca por distância, segurança e o site no ar (Render + Aiven) |
 | **Cipriano** | front-end: layout, componentes e telas (seção 7) |
 | **Mariana** | documentação + área administrativa |
 | **Nicolle** | documentação + qualidade: textos da interface, roteiro de teste, dados de demonstração |
@@ -1094,10 +1052,12 @@ algoritmo; consultar o COMPROVA da ANS; checar horário livre só com SELECT ant
 | Período | Foco |
 |---|---|
 | 18–24/09 | fundação: projeto rodando, banco populado ✅ |
-| 25/09–01/10 | cadastros e perfis ✅ (back-end) · telas internas |
-| 02–08/10 | núcleo: busca, horários, agendar, cancelar, remarcar ✅ · telas internas |
-| 09–15/10 | fechamento: e-mails ✅, avaliações, dashboards |
+| 25–30/09 | cadastros, perfis, telas internas, busca por distância, site no ar ✅ |
+| 01–08/10 | reorganização sem agendamento (01/10), PointMed (05/10), integração na `main` (08/10) ✅ |
+| 09–15/10 | fechamento: unidades, segurança (12/10) ✅, revisão geral (12/10) ✅, decisões pendentes (§6) |
 | 16–20/10 | integração, testes, documentação, ensaio — **não construir nada novo** |
+
+*(A tabela de pessoas é a de 18/09; o cronograma foi atualizado em 12/10 para o que de fato aconteceu.)*
 
 **Regras para todos:**
 1. **Branch por frente. Ninguém commita direto na `main`.**

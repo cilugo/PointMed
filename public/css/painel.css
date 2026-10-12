@@ -608,6 +608,12 @@ a.fm-cartao--link:hover { border-color: var(--fm-borda-forte); }
 
 .fm-linha:has(.fm-linha__icone) { grid-template-columns: 38px minmax(0, 1fr) auto; }
 
+/* Linha com nome + nota (cartão "Unidades" do início da clínica). Sem isto o nome caía na
+   coluna de 84 px da data e a etiqueta da nota ocupava o resto (12/10/2026). A mesma regra
+   está em crud.css, que o painel de início não carrega. */
+.fm-linha--nota { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fm-linha--nota .fm-linha__info { flex: 1; }
+
 .fm-linha__icone {
     display: grid;
     place-items: center;

@@ -36,10 +36,10 @@ php artisan migrate --force
 # 5. Banco vazio (primeiro deploy)? Coloca os dados de demonstração.
 USUARIOS=$(php artisan tinker --execute='echo \App\Models\User::count();' 2>/dev/null | tail -n 1)
 if [ "$USUARIOS" = "0" ]; then
-    echo "FacilMed: banco vazio, rodando os seeders de demonstração."
+    echo "PointMed: banco vazio, rodando os seeders de demonstração."
     php artisan db:seed --force
 else
-    echo "FacilMed: banco já tem dados ($USUARIOS usuários), seeder não roda."
+    echo "PointMed: banco já tem dados ($USUARIOS usuários), seeder não roda."
 fi
 
 # 5b. (12/10/2026) A senha "facilmed2026" está no README (repositório público).

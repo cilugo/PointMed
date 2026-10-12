@@ -111,4 +111,25 @@ class TelasAdminTest extends TestCase
         $this->comoAdmin()->get('/admin/especialidades')->assertOk()->assertSee('Reumatologia');
     }
 
+    /**
+     * 12/10/2026: sem cadastro no mês anterior não há porcentagem para mostrar, e o
+     * cartão ficava só com "cadastros no mês x mês anterior", sem número nenhum
+     * (na demonstração era sempre assim: todo o seed nasce no mesmo dia).
+     */
+    public function test_cartao_de_usuarios_mostra_os_cadastros_do_mes_sem_mes_anterior(): void
+    {
+        $this->comoAdmin()->get('/admin')
+            ->assertOk()
+            ->assertSee('2 cadastros neste mês')
+            ->assertDontSee('cadastros no mês x mês anterior');
+    }
+
+    public function test_cartao_de_usuarios_compara_com_o_mes_anterior_quando_houve_cadastro(): void
+    {
+        User::where('tipo', 'usuario')->first()->forceFill(['created_at' => today()->subMonthNoOverflow()->startOfMonth()])->save();
+
+        $this->comoAdmin()->get('/admin')
+            ->assertOk()
+            ->assertSee('cadastros neste mês x mês anterior');
+    }
 }

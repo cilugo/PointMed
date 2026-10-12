@@ -97,7 +97,7 @@ final class DadosFicticios
             'Clínica de bairro com foco em atendimento de rotina e acompanhamento.',
             ['Vida Plena - Centro', 'clinica', '12210100', 'Rua Quinze de Novembro', '480', 'Centro', 'São José dos Campos', 'SP']],
         ['contato@aurora.test', 'Centro Médico Aurora S/A', 'Centro Médico Aurora', '41100003000184', '1239452000',
-            'Centro médico com corpo clínico multidisciplinar e agenda estendida.',
+            'Centro médico com corpo clínico multidisciplinar e atendimento em horário estendido.',
             ['Aurora - Vila Ema', 'clinica', '12243700', 'Rua República do Iraque', '90', 'Vila Ema', 'São José dos Campos', 'SP']],
         ['contato@santaclara.test', 'Hospital Santa Clara de Taubaté LTDA', 'Hospital Santa Clara', '42200001000120', '1236323000',
             'Hospital geral com ambulatório de especialidades.',

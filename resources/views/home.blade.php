@@ -3,7 +3,10 @@
 
     Visual e estrutura vêm da home que o grupo fez no protótipo
     (paginas/home.html + css/home.css), agora com dados do banco:
-    especialidades reais, médicos verificados e a busca funcionando.
+    especialidades reais, médicos com CRM conferido e a busca funcionando.
+    12/10/2026: o contador dizia "médicos verificados"; virou "com CRM conferido"
+    (a conferência é na base simulada, AGENTS §3 — nada de dar a entender
+    que alguém verificou de verdade).
 
     01/10/2026: o PointMed não agenda mais consultas. Os textos falam em
     encontrar e avaliar locais e médicos; a busca do topo leva para os
@@ -61,7 +64,7 @@
                 </form>
 
                 <div class="hero-numeros">
-                    <div><strong>{{ $totais['medicos'] }}</strong><span>médicos verificados</span></div>
+                    <div><strong>{{ $totais['medicos'] }}</strong><span>médicos com CRM conferido</span></div>
                     <div><strong>{{ $totais['unidades'] }}</strong><span>clínicas e hospitais</span></div>
                     <div><strong>{{ $totais['cidades'] }}</strong><span>{{ $totais['cidades'] === 1 ? 'cidade' : 'cidades' }}</span></div>
                 </div>
