@@ -44,7 +44,7 @@ Ampliar o escopo por conta própria é errado, mesmo que a funcionalidade apare�
   `http://localhost/FacilMed`. Fuso `America/Sao_Paulo`.
 - **Não instalar dependência nova** (Composer ou npm) sem registrar a decisão no README §6 e ter aprovação.
 - "Estado bom": `php artisan migrate:fresh --seed` roda limpo **e** `php artisan test` passa
-  (141 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
+  (152 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
   ligada no `php.ini` do XAMPP).
 
 ## 3. Regras invioláveis de negócio e de dados
@@ -122,7 +122,10 @@ intenção de quem escreveu a tela.
   nunca expor esses três em tela pública. A clínica avaliada (`Avaliacao::daClinica`) e o admin
   continuam vendo as avaliações nos painéis deles.
 - **Nunca** salvar a localização do usuário (banco, sessão, log). Ela vai só na URL da busca de
-  locais, arredondada, e serve só para ordenar por distância (29/09/2026).
+  locais, arredondada, e serve só para ordenar por distância (29/09/2026). Por isso o log do Apache
+  (`Dockerfile`) não guarda a query string nem o Referer, e nenhum `Log::` leva URL de busca
+  (12/10/2026). O cache do CEP (`Geocodificador`) guarda só "CEP → ponto", com a chave em hash,
+  sem ligação com quem buscou.
 - **Nunca** apagar usuário com `delete()` nem fazer um segundo caminho de exclusão de conta: a
   exclusão pedida pelo usuário (LGPD, 30/09/2026) é **só** por `Usuario::excluirConta()`, que
   anonimiza (a nota fica na média, o dado pessoal, o comentário e a foto somem). Conta excluída (`excluida_em` preenchido) nunca
@@ -192,6 +195,11 @@ ficam no banco desde 07/10/2026 e, nos testes, somem com a transação do `Refre
   conta de acesso usa `DadosFicticios::senha()` e entra em `emailsDasContas()` — nunca senha fixa.
 - Toda query com input do usuário passa por Eloquent ou query bindings. Nunca concatenar string
   em SQL.
+- **Nunca** voltar a confiar no `X-Forwarded-Host` (`trustProxies` em `bootstrap/app.php`) nem tirar o
+  `URL::forceRootUrl` do site no ar (`AppServiceProvider`): com isso o link do "Esqueci minha senha"
+  podia sair apontando para o site de um golpista (12/10/2026).
+- Formulário novo que cria conta, manda e-mail, confere senha/documento ou grava no banco a partir de
+  visitante leva `throttle` na rota (12/10/2026). Os limites atuais estão no README §6.
 - Toda rota autenticada protegida por middleware **e** por Policy. Middleware diz "está logado";
   Policy diz "é dono disso". Faltar a segunda é o furo clássico: a clínica A editando o médico
   que só atende na clínica B, ou o usuário A apagando a avaliação do usuário B.

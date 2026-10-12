@@ -318,7 +318,7 @@ FacilMed/                  ← a pasta continua com o nome antigo (ver o aviso n
 ├── lang/pt_BR/            ← mensagens em português
 ├── config/                ← configurações (navegacao.php = menus,
 │                             localizacao.php = coordenadas aproximadas das cidades)
-├── tests/Feature/         ← 141 testes automáticos
+├── tests/Feature/         ← 152 testes automáticos
 ├── storage/               ← logs e cache (gerado)
 ├── design/                ← prints e protótipos de tela (referência visual)
 └── prototipo-antigo/      ← versão antiga em PHP puro (não usada pelo sistema)
@@ -429,7 +429,7 @@ distância            → linha reta (Haversine, App\Support\Localizacao), calcu
 
 ### 5.7 Testes automáticos
 
-`php artisan test` → **141 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
+`php artisan test` → **152 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
 distância, CEP com raio, avaliações, clínica (médicos, unidades, convênios), admin, exclusão de
 conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no banco
 `facilmed_testes` (criado sozinho), **nunca** no `facilmed`. Os de foto precisam da extensão
@@ -443,6 +443,51 @@ conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no b
 > **Atualize ao terminar cada etapa.**
 
 **Atualizado em 12/10/2026.**
+
+**12/10 — segurança: revisão completa** (feito com o Claude, branch `seguranca/revisao-completa`, a
+partir de `seguranca/vinculo-medico-cpf`; pedido do Sidney: "fazer tudo de uma vez e revisar tudo").
+Cada item tem teste em `RevisaoSegurancaTest` (11 testes novos).
+- **Link do "Esqueci minha senha" desviado (achado nesta revisão, o mais grave do bloco).** O
+  `trustProxies(at: '*')` aceitava o cabeçalho `X-Forwarded-Host` de qualquer pessoa, e o Laravel
+  montava o link do e-mail com ele: um golpista pedia a troca de senha da vítima com
+  `X-Forwarded-Host: site-dele`, e o e-mail **de verdade** do PointMed chegava com o link (e o código
+  secreto) apontando para o site dele. Corrigido em dois lugares: `bootstrap/app.php` confia só nos
+  cabeçalhos de IP, porta e protocolo; e, no site no ar, `AppServiceProvider` força o endereço do
+  `APP_URL`, em https, para todo link.
+- **Trocar a senha derruba as outras sessões.** `AuthenticateSession` (do Laravel) no grupo `web`:
+  quem estava logado com a senha antiga em outro aparelho (ou com "lembrar de mim") cai fora na
+  próxima página; quem trocou continua. Vale também para o "Esqueci minha senha". Nos testes, o
+  `TestCase::actingAs()` esquece a senha da conta anterior ao trocar de usuário (ver o comentário lá).
+- **Limites de tentativas** (`throttle`, por usuário logado ou por endereço IP):
+  cadastro de usuário e de clínica 10/min; "Esqueci minha senha" e "Nova senha" 6/min; trocar senha e
+  excluir conta 6/min; avaliações 20/min; foto 10/min; especialidade nova da clínica 10/min (e, do
+  item 2, cadastrar médico 10/min). Passou do limite, a resposta é 429 ("Muitas tentativas").
+- **Busca por CEP:** a resposta do ViaCEP/Nominatim fica no cache 1 dia (CEP não encontrado, 1 hora),
+  com a chave em hash — o que fica é "este CEP fica neste ponto", sem ligação com quem buscou. CEP novo
+  conta no limite de 20 por minuto por IP; passou, a tela pede para esperar sem sair para a internet.
+- **Localização fora do log:** o log do Apache no Render guardava a URL inteira, com o CEP e a
+  latitude/longitude de quem buscou (conferido no log de 12/10). O `Dockerfile` troca o formato do log:
+  sem a parte depois do `?` e sem o Referer. As mensagens de "ViaCEP/Nominatim fora do ar" também não
+  levam mais a URL.
+- **Fotos sem metadados:** `FotoDePerfil` redesenha a imagem com o GD antes de guardar — sai o EXIF
+  (GPS, aparelho, data), a rotação do celular é aplicada antes (com teste), e a foto fica com no máximo 1024 px.
+  O `Dockerfile` passou a instalar `gd` (com jpeg e webp) e `exif`. No XAMPP sem `extension=gd`, a
+  foto é guardada como veio.
+- **Cookie e cabeçalhos:** no site no ar o cookie da sessão só viaja por https
+  (`config/session.php`, padrão ligado em `production`). Middleware novo `CabecalhosDeSeguranca`:
+  `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy` e, no site no ar,
+  `Strict-Transport-Security`. Sem CSP de propósito (o Alpine precisa avaliar as expressões das telas).
+- **`entrypoint.sh`:** saiu o passo 4a (`migrate:fresh --seed` automático), que estava pendente.
+- **Decidido não mexer** (fica registrado): o cadastro continua dizendo "Já existe um cadastro com
+  esse CPF" — esconder isso exigiria confirmação por e-mail; o limite de 10 cadastros/min torna a
+  consulta em massa inviável. A clínica continua criando especialidade sem aprovação do admin (com
+  limite); se o grupo quiser moderação, é uma mudança de produto.
+- **Limite que fica:** o Render põe o IP do visitante no começo do `X-Forwarded-For` e pode acrescentar
+  IPs internos depois; o Laravel usa o último que não é do proxy. Se for um IP interno, os limites
+  "por IP" passam a valer para o site inteiro (ex.: 10 cadastros por minuto somando todo mundo). Não
+  abre brecha, só pode fazer alguém esperar um minuto. Os limites por usuário logado não mudam.
+- **Conferido:** **152 testes** passando, `migrate:fresh --seed` limpo, os testes novos falhando no
+  código antigo (o do link e o da foto) e o formato do log testado num Apache de verdade.
 
 **12/10 — segurança: clínica não "pega" mais o médico de outra clínica** (revisão de segurança, item 2;
 feito com o Claude, branch `seguranca/vinculo-medico-cpf`, a partir da `main` `9d936f0`; escolha:
@@ -485,9 +530,7 @@ o Claude; branch `seguranca/senha-demonstracao`, a partir da `main` `4c49fab`).
   segundo boot → 0 trocadas; sem a variável → senha aleatória e aviso no log).
 - **⚠ Antes de publicar:** criar `DEMO_PASSWORD` no Render (Environment). Sem ela, ninguém entra nas
   contas de demonstração (nem o grupo) até a variável ser preenchida.
-- **Ainda em aberto da mesma revisão** (próximos passos, por gravidade): cadastro revela se um CPF já tem conta; sem limite de tentativas no cadastro, na
-  avaliação e na busca por CEP (que também não tem cache); trocar a senha não derruba as outras
-  sessões; `SESSION_SECURE_COOKIE` ausente no Render; fotos guardam os dados EXIF.
+- O resto da revisão foi feito no mesmo dia (bloco "revisão completa", acima).
 
 **12/10 — unidade: editar e desativar; README revisado** (feito com o Claude a partir da `main`
 `e756f1c`; escolhas do Sidney: ao desativar, os médicos ficam ligados à unidade; pode desativar a
@@ -526,9 +569,8 @@ o Claude; branch `seguranca/senha-demonstracao`, a partir da `main` `4c49fab`).
   - Teste novo em `PaginasTest` (os três painéis carregam o botão). **127 → 128 testes.**
 - **Depois de puxar:** nada de banco (não tem migration nova). `php artisan optimize:clear` se a
   tela de Unidades ou o menu não mudarem; no navegador, Ctrl + F5 para pegar o CSS novo.
-- **Pendente, não feito (o grupo decide):** tirar do `docker/entrypoint.sh` o passo 4a, que roda
-  `migrate:fresh --seed` se a tabela `consultas` existir. Já cumpriu o papel; se um dia `consultas`
-  voltar, o banco do site seria apagado a cada publicação.
+- *(Feito em 12/10, revisão de segurança: o passo 4a do `docker/entrypoint.sh`, que rodava
+  `migrate:fresh --seed` se a tabela `consultas` existisse, saiu.)*
 
 
 **07–08/10 — integração: a linha PointMed vira a principal** (decisão do grupo, comunicada pelo

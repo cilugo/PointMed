@@ -24,18 +24,11 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# 4a. (07/10/2026, decisão do grupo — README §6) Troca de linha: o banco do
-#     Render estava no formato da versão COM agendamento, e as migrations do
-#     PointMed não foram escritas para ele. Se a tabela "consultas" ainda
-#     existe (só existe na versão antiga), o banco é zerado e recriado com os
-#     dados de demonstração. Acontece UMA vez: depois disso "consultas" não
-#     existe mais e este passo não faz nada. Os dados são fictícios; contas
-#     criadas direto no site antigo precisam ser criadas de novo.
-VERSAO_ANTIGA=$(php artisan tinker --execute='echo \Illuminate\Support\Facades\Schema::hasTable("consultas") ? "sim" : "nao";' 2>/dev/null | tail -n 1)
-if [ "$VERSAO_ANTIGA" = "sim" ]; then
-    echo "PointMed: banco na versão antiga (com agendamento). Recriando com migrate:fresh --seed."
-    php artisan migrate:fresh --seed --force
-fi
+# 4a. (removido em 12/10/2026, revisão de segurança) Aqui havia um
+#     "migrate:fresh --seed" automático, usado UMA vez em 07/10 para trocar o
+#     banco da versão com agendamento. Ele já tinha cumprido o papel e, se a
+#     tabela "consultas" voltasse a existir, apagaria o banco do site a cada
+#     publicação. Para zerar o site de propósito: README §2.7 (aba Shell).
 
 # 4. Cria/atualiza as tabelas. Só aplica migrations novas; não apaga nada.
 php artisan migrate --force
