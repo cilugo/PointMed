@@ -27,7 +27,7 @@ class ClinicaSeeder extends Seeder
                 ['email' => $email],
                 [
                     'name'     => $fantasia,
-                    'password' => DadosFicticios::SENHA,
+                    'password' => DadosFicticios::senha(),   // 12/10: no site no ar, a DEMO_PASSWORD
                     'tipo'     => User::TIPO_CLINICA,
                     'telefone' => $telefone,
                     'status'   => 'ativo',
@@ -59,6 +59,6 @@ class ClinicaSeeder extends Seeder
             HorarioFuncionamento::updateOrCreate(['local_id' => $local->id, 'dia_semana' => 'sabado'], ['abre' => '08:00', 'fecha' => '12:00']);
         }
 
-        $this->command->info('3 clínicas e 3 hospitais fictícios. Senha: ' . DadosFicticios::SENHA);
+        $this->command->info('3 clínicas e 3 hospitais fictícios. Senha: ' . DadosFicticios::textoDaSenha());
     }
 }

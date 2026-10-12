@@ -44,7 +44,7 @@ Ampliar o escopo por conta própria é errado, mesmo que a funcionalidade apare�
   `http://localhost/FacilMed`. Fuso `America/Sao_Paulo`.
 - **Não instalar dependência nova** (Composer ou npm) sem registrar a decisão no README §6 e ter aprovação.
 - "Estado bom": `php artisan migrate:fresh --seed` roda limpo **e** `php artisan test` passa
-  (128 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
+  (135 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
   ligada no `php.ini` do XAMPP).
 
 ## 3. Regras invioláveis de negócio e de dados
@@ -183,6 +183,10 @@ ficam no banco desde 07/10/2026 e, nos testes, somem com a transação do `Refre
 - Nunca usar nem expor credencial real em log, código, commit ou handoff.
 - Senha sempre via `Hash::make` / `bcrypt`. Nunca em texto puro, nem em seeder de demonstração
   (no seeder, use senha fictícia óbvia e documente qual é).
+- **A senha de demonstração do README (`facilmed2026`) nunca vale no site no ar** (12/10/2026). O
+  repositório é público. No Render, as contas do seed usam a `DEMO_PASSWORD` (só no painel), via
+  `DadosFicticios::senha()` e o comando `facilmed:proteger-demonstracao` no boot. Seeder novo com
+  conta de acesso usa `DadosFicticios::senha()` e entra em `emailsDasContas()` — nunca senha fixa.
 - Toda query com input do usuário passa por Eloquent ou query bindings. Nunca concatenar string
   em SQL.
 - Toda rota autenticada protegida por middleware **e** por Policy. Middleware diz "está logado";

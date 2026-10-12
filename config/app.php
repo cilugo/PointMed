@@ -123,4 +123,20 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | PointMed — senha das contas de demonstração NO SITE NO AR (12/10/2026)
+    |--------------------------------------------------------------------------
+    |
+    | A senha "facilmed2026" está no README, e o repositório é público: no
+    | site no ar ela não pode valer. No Render, a variável DEMO_PASSWORD
+    | (só no painel, nunca no Git) vira a senha do admin, das clínicas e dos
+    | usuários do seed. Na máquina de cada um e nos testes ela fica vazia e
+    | continua valendo "facilmed2026". Ver DadosFicticios::senha() e o
+    | comando facilmed:proteger-demonstracao.
+    |
+    */
+
+    'senha_demonstracao' => env('DEMO_PASSWORD'),
+
 ];

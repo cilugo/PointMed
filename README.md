@@ -158,7 +158,17 @@ Arquivos do deploy (não mexem no XAMPP): `Dockerfile`, `docker/entrypoint.sh`, 
 `.dockerignore`. A cada vez que o servidor liga, o `entrypoint.sh`:
 1. roda `php artisan migrate --force` (só aplica migration nova; não apaga nada);
 2. se o banco estiver **vazio**, roda os seeders (as contas da §3 passam a existir no site);
-3. faz o cache de config, rotas e telas.
+3. troca a senha das contas de demonstração pela `DEMO_PASSWORD` (`facilmed:proteger-demonstracao`,
+   12/10 — ver abaixo);
+4. faz o cache de config, rotas e telas.
+
+**Senha das contas de demonstração no site (12/10/2026).** O repositório é público e a §3 mostra a
+senha `facilmed2026`. **No site no ar ela não vale:** o admin, as clínicas e os usuários do seed
+usam a senha da variável **`DEMO_PASSWORD`**, que fica só no painel do Render (Environment) e com o
+grupo. Para trocar, mude a variável e publique de novo (aba Actions → **Run workflow**): no boot, as
+contas passam para a senha nova e quem estava logado nelas cai fora. **Sem a variável**, essas contas
+ficam com uma senha aleatória (ninguém entra) e a aba **Logs** avisa. Na máquina de cada um e nos
+testes nada muda: continua `facilmed2026`.
 
 **Por que MySQL no Aiven e não o Postgres do Render?** O banco do grupo é o MariaDB do XAMPP
 (mesma família do MySQL), as migrations usam recursos dele (`CHECK`, `ENUM`) e o Postgres grátis do
@@ -174,6 +184,7 @@ Render é apagado depois de 30 dias.
    - `APP_KEY`: a chave do Laravel (`base64:...`). Gerar: `php artisan key:generate --show`.
    - `DB_URL`: o *Service URI* do Aiven.
    - `MYSQL_CA_CERT`: o texto do certificado do Aiven.
+   - `DEMO_PASSWORD`: a senha das contas de demonstração no site (mínimo 8, **nunca** `facilmed2026`).
 3. **Apply**. O primeiro build leva uns 5–10 minutos. O endereço aparece no topo
    (`https://facilmed-xxxx.onrender.com`). Aba **Logs** mostra os erros, se houver.
 
@@ -184,16 +195,20 @@ Render é apagado depois de 30 dias.
   antes). Basta religar no painel.
 - O único e-mail do sistema é o de "Esqueci minha senha". Ele sai de verdade pelo Brevo só se
   `BREVO_API_KEY` e `MAIL_FROM_ADDRESS` estiverem preenchidos no Render; sem eles, vai para o log.
-- **Nunca** coloque senha do banco ou `APP_KEY` em arquivo do Git: elas ficam só no painel do Render.
+- **Nunca** coloque senha do banco, `APP_KEY` ou `DEMO_PASSWORD` em arquivo do Git (nem no
+  README, nem em mensagem de commit): elas ficam só no painel do Render.
 
 **Apagar tudo e recriar os dados de demonstração no servidor:** no Render, aba **Shell**:
-`php artisan migrate:fresh --seed --force` (⚠ apaga o que foi cadastrado no site).
+`php artisan migrate:fresh --seed --force` (⚠ apaga o que foi cadastrado no site). As contas
+recriadas já nascem com a `DEMO_PASSWORD`.
 
 ---
 
 ## 3. Contas e dados de teste
 
-**Senha de todas as contas: `facilmed2026`**
+**Senha de todas as contas: `facilmed2026`** — na sua máquina (XAMPP) e nos testes.
+**No site no ar (facilmed.onrender.com) a senha é outra:** a `DEMO_PASSWORD` do Render, que fica só
+com o grupo (§2.7). Nunca escreva essa senha aqui.
 
 | Tipo | E-mail | Observação |
 |---|---|---|
@@ -302,7 +317,7 @@ FacilMed/                  ← a pasta continua com o nome antigo (ver o aviso n
 ├── lang/pt_BR/            ← mensagens em português
 ├── config/                ← configurações (navegacao.php = menus,
 │                             localizacao.php = coordenadas aproximadas das cidades)
-├── tests/Feature/         ← 128 testes automáticos
+├── tests/Feature/         ← 135 testes automáticos
 ├── storage/               ← logs e cache (gerado)
 ├── design/                ← prints e protótipos de tela (referência visual)
 └── prototipo-antigo/      ← versão antiga em PHP puro (não usada pelo sistema)
@@ -413,7 +428,7 @@ distância            → linha reta (Haversine, App\Support\Localizacao), calcu
 
 ### 5.7 Testes automáticos
 
-`php artisan test` → **128 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
+`php artisan test` → **135 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
 distância, CEP com raio, avaliações, clínica (médicos, unidades, convênios), admin, exclusão de
 conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no banco
 `facilmed_testes` (criado sozinho), **nunca** no `facilmed`. Os de foto precisam da extensão
@@ -427,6 +442,33 @@ conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no b
 > **Atualize ao terminar cada etapa.**
 
 **Atualizado em 12/10/2026.**
+
+**12/10 — segurança: a senha do README não abre mais o site no ar** (revisão de segurança feita com
+o Claude; branch `seguranca/senha-demonstracao`, a partir da `main` `4c49fab`).
+- **O problema:** o repositório é público, a §3 mostra `facilmed2026`, e o `entrypoint.sh` roda o
+  seeder no Render. Qualquer pessoa entrava em facilmed.onrender.com como **admin** (com acesso ao e-mail de
+  todo mundo que se cadastrou, bloqueava contas, mexia em convênios) ou como qualquer clínica do seed.
+- **O que mudou:** variável nova **`DEMO_PASSWORD`** no Render (`render.yaml`, `config/app.php` →
+  `app.senha_demonstracao`). Os seeders gravam `DadosFicticios::senha()`: a variável no site, uma
+  senha aleatória no site sem a variável, e `facilmed2026` no XAMPP e nos testes. O `AdminSeeder`
+  tinha `Hash::make('facilmed2026')` fixo e passou a usar o mesmo. Nenhum seeder escreve mais a senha
+  do site no log.
+- **Comando novo `facilmed:proteger-demonstracao`**, no `entrypoint.sh` depois do seeder (passo 5b):
+  só age com `APP_ENV=production`; passa as 9 contas de demonstração
+  (`DadosFicticios::emailsDasContas()`) para a `DEMO_PASSWORD` e apaga as sessões abertas, o
+  "lembrar de mim" e os links de troca de senha dessas contas — quem entrou com a senha antiga cai
+  fora. Não mexe em conta criada pelo site nem no admin de `ADMIN_EMAIL`. Está **sem `|| true`** de
+  propósito: se falhar, o servidor não sobe com o admin aberto.
+- **Testes:** novo `SenhaDemonstracaoTest` (7). Conferido aqui: `migrate:fresh --seed` limpo,
+  **135 testes** passando e o boot do Render simulado (banco com a senha antiga → 9 contas trocadas;
+  segundo boot → 0 trocadas; sem a variável → senha aleatória e aviso no log).
+- **⚠ Antes de publicar:** criar `DEMO_PASSWORD` no Render (Environment). Sem ela, ninguém entra nas
+  contas de demonstração (nem o grupo) até a variável ser preenchida.
+- **Ainda em aberto da mesma revisão** (próximos passos, por gravidade): clínica consegue assumir o
+  perfil de médico de outra clínica só com o CRM/UF (público) e editar bio, foto, especialidades e
+  convênios dele; cadastro revela se um CPF já tem conta; sem limite de tentativas no cadastro, na
+  avaliação e na busca por CEP (que também não tem cache); trocar a senha não derruba as outras
+  sessões; `SESSION_SECURE_COOKIE` ausente no Render; fotos guardam os dados EXIF.
 
 **12/10 — unidade: editar e desativar; README revisado** (feito com o Claude a partir da `main`
 `e756f1c`; escolhas do Sidney: ao desativar, os médicos ficam ligados à unidade; pode desativar a

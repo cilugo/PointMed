@@ -49,6 +49,13 @@ else
     echo "FacilMed: banco já tem dados ($USUARIOS usuários), seeder não roda."
 fi
 
+# 5b. (12/10/2026) A senha "facilmed2026" está no README (repositório público).
+#     Aqui ela deixa de valer: as contas de demonstração passam a usar a
+#     DEMO_PASSWORD do Render (sem a variável, uma senha aleatória). Quem já
+#     estava logado nessas contas cai fora. SEM "|| true" de propósito: se
+#     isto falhar, o servidor não sobe com o admin aberto para qualquer um.
+php artisan facilmed:proteger-demonstracao
+
 # 6. (01/10/2026) Administrador com e-mail de verdade, se ADMIN_EMAIL e
 #    ADMIN_PASSWORD estiverem no Render. Já existe? Não mexe. Nunca derruba o boot.
 php artisan facilmed:garantir-admin || true
