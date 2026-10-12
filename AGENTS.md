@@ -7,7 +7,7 @@
 > telas — está no `README.md`.** Leia o README (principalmente §4, §5 e §6) antes de editar.
 > Se algo aqui conflitar com outro arquivo, **este vence**.
 >
-> Última revisão: 05/10/2026 (notas do Lucas): o projeto se chama **PointMed** (era FacilMed);
+> Última revisão: 12/10/2026 (unidade: a clínica edita e desativa, §3). Antes, 05/10/2026 (notas do Lucas): o projeto se chama **PointMed** (era FacilMed);
 > quem busca clínicas é o **usuário** (não "paciente"); a faixa de preço é escolhida pela clínica em
 > cada unidade; o comentário das avaliações é público. Antes, em 01/10/2026: o projeto deixou de
 > agendar consultas e o médico deixou de ter conta.
@@ -44,7 +44,7 @@ Ampliar o escopo por conta própria é errado, mesmo que a funcionalidade apare�
   `http://localhost/FacilMed`. Fuso `America/Sao_Paulo`.
 - **Não instalar dependência nova** (Composer ou npm) sem registrar a decisão no README §6 e ter aprovação.
 - "Estado bom": `php artisan migrate:fresh --seed` roda limpo **e** `php artisan test` passa
-  (116 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
+  (128 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
   ligada no `php.ini` do XAMPP).
 
 ## 3. Regras invioláveis de negócio e de dados
@@ -77,6 +77,8 @@ intenção de quem escreveu a tela.
   deixar claro na tela e no texto do TCC que a plataforma não tem contrato com nenhuma operadora.
 - **Nunca** apagar convênio ou plano: desativar (`ativo = false`). Apagar leva em cascata os
   planos e as carteirinhas dos usuários.
+- **Unidade (local) também não se apaga** (12/10/2026): a clínica desativa (`locais.ativo = false`)
+  em Clínica → Unidades. Desativar **não** mexe nos vínculos — eles voltam a aparecer ao reativar.
 
 **Nada de conteúdo clínico**
 

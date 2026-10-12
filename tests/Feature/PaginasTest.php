@@ -44,4 +44,20 @@ class PaginasTest extends TestCase
         $this->get('/buscar?ordem=nome')->assertOk()->assertSeeInOrder(['Dr. Rafael Moreira', 'Dra. Camila Reis', 'Dra. Helena Navarro']);
         $this->get('/buscar?ordem=qualquer')->assertOk();
     }
+
+    /**
+     * 12/10/2026: o símbolo do PointMed é o botão do menu, nos três painéis
+     * (layouts/painel + components/sidebar + public/javas/menu.js).
+     */
+    public function test_simbolo_e_o_botao_do_menu_nos_tres_paineis(): void
+    {
+        foreach (['ana@facilmed.test' => '/usuario', 'contato@vidaplena.test' => '/clinica', 'admin@facilmed.test' => '/admin'] as $email => $url) {
+            $this->comoUsuario($email)->get($url)->assertOk()
+                ->assertSee('javas/menu.js', false)
+                ->assertSee('x-data="fmMenu()"', false)
+                ->assertSee('class="fm-marca"', false)
+                ->assertSee('imgs/marca/simbolo-icone.png', false)
+                ->assertDontSee('fm-sidebar__fechar', false);
+        }
+    }
 }

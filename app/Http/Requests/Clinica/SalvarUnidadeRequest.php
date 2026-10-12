@@ -2,7 +2,6 @@
 
 namespace App\Http\Requests\Clinica;
 
-use App\Models\HorarioFuncionamento;
 use App\Support\Uf;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +25,19 @@ class SalvarUnidadeRequest extends FormRequest
 
     public function rules(): array
     {
-        $regras = [
+        return $this->regrasDosDados() + [
+            'faixa_preco' => ['nullable', 'integer', 'between:1,4'],   // 05/10: escolhida pela clínica
+            'horarios'    => ['nullable', 'array'],
+        ] + HorariosDeFuncionamento::regras();
+    }
+
+    /**
+     * Nome, tipo, endereço e telefone. As mesmas regras no cadastro e na
+     * edição da unidade (AtualizarUnidadeRequest, 12/10/2026).
+     */
+    protected function regrasDosDados(): array
+    {
+        return [
             'nome'        => ['required', 'string', 'max:150'],
             'tipo'        => ['required', Rule::in(['clinica', 'hospital'])],
             'cep'         => ['required', 'digits:8'],
@@ -37,11 +48,7 @@ class SalvarUnidadeRequest extends FormRequest
             'cidade'      => ['required', 'string', 'max:100'],
             'uf'          => ['required', Rule::in(Uf::TODAS)],
             'telefone'    => ['nullable', 'digits_between:10,11'],
-            'faixa_preco' => ['nullable', 'integer', 'between:1,4'],   // 05/10: escolhida pela clínica
-            'horarios'    => ['nullable', 'array'],
         ];
-
-        return $regras + HorariosDeFuncionamento::regras();
     }
 
     public function messages(): array

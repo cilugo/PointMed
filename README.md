@@ -22,7 +22,7 @@ Entrega: **20/10/2026**.
 4. [Organização das pastas](#4-organização-das-pastas)
 5. [Como o sistema funciona](#5-como-o-sistema-funciona)
 6. [Estado atual e próximos passos](#6-estado-atual-e-próximos-passos)
-7. [Contrato das telas que faltam](#7-contrato-das-telas-que-faltam)
+7. [Mapa das telas internas](#7-mapa-das-telas-internas)
 8. [Identidade visual e tom de voz](#8-identidade-visual-e-tom-de-voz)
 9. [Decisões e o porquê](#9-decisões-e-o-porquê)
 10. [Equipe, cronograma e regras de trabalho](#10-equipe-cronograma-e-regras-de-trabalho)
@@ -99,7 +99,7 @@ composer run setup
 ```
 
 Instala as dependências, cria o `.env`, gera a chave e monta o banco com os dados de teste. No
-fim deve aparecer "22 consultas de demonstracao criadas".
+fim deve aparecer "12 avaliações de exemplo."
 
 ### 2.4 Abrir o sistema — dois jeitos
 
@@ -116,9 +116,8 @@ fim deve aparecer "22 consultas de demonstracao criadas".
 | baixar o que o grupo mudou | **Pull** no GitHub Desktop, depois `composer install` e `php artisan migrate` |
 | zerar o MEU banco e recriar os dados de teste | `composer run banco-do-zero` (apaga tudo do `facilmed` da sua máquina) |
 | rodar os testes automáticos | `php artisan test` (usa o banco `facilmed_testes`, criado sozinho) |
-| mandar os lembretes de 24h | `php artisan schedule:work` (deixa rodando) ou `php artisan facilmed:enviar-lembretes` |
 | ver erro detalhado | final de `storage/logs/laravel.log` |
-| ver os e-mails "enviados" | também em `storage/logs/laravel.log` (em desenvolvimento nenhum e-mail sai de verdade) |
+| ver o e-mail de "Esqueci minha senha" | também em `storage/logs/laravel.log` (na sua máquina, `MAIL_MAILER=log`: nenhum e-mail sai de verdade) |
 
 ### 2.6 Se algo falhar
 
@@ -132,7 +131,6 @@ fim deve aparecer "22 consultas de demonstracao criadas".
 | `No application encryption key` | `php artisan key:generate` |
 | página em branco / erro 500 | última linha de `storage/logs/laravel.log` |
 | `migrate:rollback` ou `migrate:refresh` falha em `convenios_e_planos_ficticios` ("Data truncated for column 'operadora_ans_id'") | é de propósito: convênio fictício não tem operadora e o `down()` não apaga dado. O banco fica pela metade: rode `composer run banco-do-zero` (nunca use rollback/refresh) |
-| `migrate` falha na coluna virtual de `consultas` | troque `VIRTUAL` por `PERSISTENT` na migration. **Não remova o índice único** |
 | mudei algo em `config/` e não fez efeito | `php artisan optimize:clear` |
 | "Usar minha localização" não funciona | o navegador só libera a localização em `localhost` ou `https`: abra por `http://localhost/FacilMed` (não pelo IP da rede). Se você negou a permissão, libere no cadeado da barra de endereço — ou escolha a cidade na lista |
 | `localhost/FacilMed` dá "Not Found" do Apache | em `C:\xampp\apache\conf\httpd.conf`, `LoadModule rewrite_module` sem `#` na frente; reinicie o Apache |
@@ -162,8 +160,9 @@ Arquivos do deploy (não mexem no XAMPP): `Dockerfile`, `docker/entrypoint.sh`, 
 2. se o banco estiver **vazio**, roda os seeders (as contas da §3 passam a existir no site);
 3. faz o cache de config, rotas e telas.
 
-**Por que MySQL no Aiven e não o Postgres do Render?** O projeto usa SQL do MySQL (`DAYOFWEEK`,
-`HOUR`, coluna virtual `horario_ativo`) e o Postgres grátis do Render é apagado depois de 30 dias.
+**Por que MySQL no Aiven e não o Postgres do Render?** O banco do grupo é o MariaDB do XAMPP
+(mesma família do MySQL), as migrations usam recursos dele (`CHECK`, `ENUM`) e o Postgres grátis do
+Render é apagado depois de 30 dias.
 
 **Montar do zero (só uma vez):**
 1. **Aiven** — em aiven.io, crie conta → *Create service* → **MySQL** → plano **Free**. Quando ficar
@@ -183,7 +182,8 @@ Arquivos do deploy (não mexem no XAMPP): `Dockerfile`, `docker/entrypoint.sh`, 
   Abra o site uns 2 minutos antes de apresentar.
 - O Aiven pode desligar o banco grátis depois de muito tempo **sem nenhum uso** (avisa por e-mail
   antes). Basta religar no painel.
-- E-mail continua em `MAIL_MAILER=log` (não sai de verdade) e o agendador dos lembretes não roda.
+- O único e-mail do sistema é o de "Esqueci minha senha". Ele sai de verdade pelo Brevo só se
+  `BREVO_API_KEY` e `MAIL_FROM_ADDRESS` estiverem preenchidos no Render; sem eles, vai para o log.
 - **Nunca** coloque senha do banco ou `APP_KEY` em arquivo do Git: elas ficam só no painel do Render.
 
 **Apagar tudo e recriar os dados de demonstração no servidor:** no Render, aba **Shell**:
@@ -269,38 +269,40 @@ Desde 29/09 o médico não se cadastra sozinho: `/cadastro/medico` só volta par
 ## 4. Organização das pastas
 
 ```
-FacilMed/
+FacilMed/                  ← a pasta continua com o nome antigo (ver o aviso no topo)
 ├── README.md              ← este documento
 ├── AGENTS.md, CLAUDE.md   ← regras para IAs (ficam na raiz para elas acharem)
 ├── index.php, .htaccess   ← fazem http://localhost/FacilMed abrir o sistema pelo XAMPP
 ├── composer.json          ← dependências e os atalhos "composer run setup/dev/banco-do-zero"
+├── Dockerfile, render.yaml, docker/, .github/  ← só para o site no ar (§2.7)
 │
 ├── app/
-│   ├── Http/Controllers/  ← um controller por tela: Paciente/, Medico/, Clinica/, Admin/, Auth/
-│   ├── Http/Requests/     ← validação dos formulários (Paciente/, Medico/, Clinica/, Admin/)
-│   ├── Http/Middleware/   ← tipo de conta, conta ativa, troca de senha temporária
+│   ├── Http/Controllers/  ← um controller por tela: Usuario/, Clinica/, Admin/, Auth/ e, na raiz,
+│   │                         Home, Busca, PerfilPublico, Cadastro e Foto
+│   ├── Http/Requests/     ← validação dos formulários (Usuario/, Clinica/, Admin/, Auth/)
+│   ├── Http/Middleware/   ← tipo de conta (GarantirTipoUsuario) e conta ativa (GarantirContaAtiva)
 │   ├── Models/            ← tabelas e relacionamentos
-│   ├── Policies/          ← quem pode ver/mexer em quê
+│   ├── Policies/          ← quem pode mexer em quê (local, médico, vínculo, avaliação, carteirinha)
 │   ├── Rules/             ← CPF, CNPJ, senha, CRM/CNPJ na base simulada
-│   ├── Services/          ← regras grandes: horários livres, alocação de médico,
-│   │                         bases simuladas, estatísticas, e-mails (Notificador)
-│   ├── Mail/              ← e-mail dos avisos de consulta
-│   ├── Console/Commands/  ← comando dos lembretes
-│   └── Support/           ← formatação (datas, CPF, telefone), lista de UFs
+│   ├── Services/          ← BaseSimulada (confere CRM, CNPJ e carteirinha)
+│   ├── Mail/              ← BrevoTransport (envio do e-mail pela API do Brevo)
+│   ├── Console/Commands/  ← facilmed:garantir-admin (admin do Render) e facilmed:importar-operadoras
+│   │                         (ANS; opcional desde 24/09, quando os convênios viraram 100% fictícios)
+│   └── Support/           ← formatação, faixa de preço, foto de perfil, localização/distância, CEP
 ├── database/
 │   ├── migrations/        ← estrutura do banco (fonte da verdade)
 │   └── seeders/           ← dados fictícios (DadosFicticios.php)
 ├── resources/views/       ← telas (Blade)
 │   ├── layouts/           ← site (público), auth (login), cadastro (cadastros), painel
-│   ├── home, busca/, publico/, cadastro/, auth/, agendamento/
-│   ├── paciente/, medico/, clinica/, admin/
-│   └── emails/            ← texto dos e-mails
+│   ├── home, busca/, publico/, cadastro/, auth/
+│   ├── usuario/, clinica/, admin/
+│   └── painel/parciais/, components/  ← pedaços reaproveitados (cartões, foto, senha, horários)
 ├── public/                ← o que o navegador baixa: css/, javas/, imgs/
-├── routes/                ← web.php (páginas), auth.php (login), console.php (agendador)
+├── routes/                ← web.php (páginas) e auth.php (login e senha)
 ├── lang/pt_BR/            ← mensagens em português
-├── config/                ← configurações (agendamento.php, navegacao.php = menus,
+├── config/                ← configurações (navegacao.php = menus,
 │                             localizacao.php = coordenadas aproximadas das cidades)
-├── tests/Feature/         ← 170 testes automáticos
+├── tests/Feature/         ← 128 testes automáticos
 ├── storage/               ← logs e cache (gerado)
 ├── design/                ← prints e protótipos de tela (referência visual)
 └── prototipo-antigo/      ← versão antiga em PHP puro (não usada pelo sistema)
@@ -312,126 +314,110 @@ FacilMed/
 
 ### 5.1 A tabela central: `vinculos`
 
-Um **vínculo** liga um médico a um local de atendimento. Tudo que depende de "onde o médico
-atende" pendura nele:
+Um **vínculo** liga um médico a uma unidade (local) de uma clínica ou hospital. É nele que fica
+o que depende de "onde o médico atende":
 
 ```
 medico ──┐
-         ├── vinculo ──┬── precos (por especialidade)
-local ───┘             ├── disponibilidades (blocos de horário da semana)
-                       └── consultas
+         ├── vinculo ── aceita_particular, aceita_convenio, ativo
+local ───┘
 ```
 
-Sem isso o sistema não saberia em qual endereço o médico está às 14h de terça — era o furo do
-banco antigo.
+O mesmo médico pode atender em várias unidades, de clínicas diferentes. A clínica liga e desliga o
+vínculo (Meus médicos → Desvincular) e o "aceita convênio" de cada um (Convênios).
 
 ### 5.2 As tabelas, por grupo
 
-- **Contas:** `users` (tipo, status e `excluida_em`), `pacientes`, `medicos`, `clinicas`,
-  `paciente_acessibilidade` (separada de propósito: dado sensível, só com consentimento).
-- **Locais e agenda:** `locais` (de uma clínica **ou** de um médico — o banco garante um dono
-  só), `horarios_funcionamento`, `vinculos`, `precos`, `disponibilidades`, `bloqueios` (ausências),
-  `feriados`.
-- **Especialidades:** `especialidades`, `medico_especialidade` (um médico pode ter várias).
-- **Convênios:** `convenios`, `planos`, `convenio_medico` (o convênio é aceito pelo MÉDICO),
-  `paciente_planos` (carteirinhas).
-- **Consultas:** `consultas`, `avaliacoes`, `notificacoes_enviadas` (e-mails).
+- **Contas:** `users` (a conta de acesso de todos: tipo `usuario`, `clinica` ou `admin`, status,
+  `excluida_em`, foto), `usuarios` (perfil de quem busca: CPF, nascimento, sexo), `clinicas`.
+- **Médicos:** `medicos` (perfil **sem conta**, mantido pela clínica), `medico_especialidade`,
+  `convenio_medico` (o convênio é aceito pelo MÉDICO).
+- **Locais:** `locais` (unidades; todo local é de uma clínica; `ativo`, `faixa_preco`, coordenada,
+  média das avaliações), `horarios_funcionamento`, `vinculos`.
+- **Especialidades e convênios:** `especialidades`, `convenios`, `planos`, `operadoras_ans`
+  (opcional), `usuario_planos` (carteirinhas).
+- **Avaliações:** `avaliacoes` — de um local **ou** de um médico, uma por usuário em cada.
+- **Fotos:** `fotos` (a imagem em base64; ver §6, 07/10).
 - **Bases simuladas:** `base_crms`, `base_cnpjs`, `base_carteirinhas` — fazem o papel do CFM,
   da Receita e das operadoras. **Só o seeder escreve nelas.**
+- **Do Laravel:** `sessions`, `cache`, `jobs`, `password_reset_tokens`, `migrations`.
 
-### 5.3 Horário livre é calculado, nunca guardado
+### 5.3 Faixa de preço, convênio e unidade ativa
 
-> ⚠ **Desatualizado desde 01/10/2026** — o agendamento e a área do médico saíram (ver §6).
-
-`App\Services\CalculadoraDeHorarios`:
-
-```
-blocos de disponibilidades daquele dia da semana, fatiados pela duração da consulta
-  DENTRO do horário de funcionamento do local
-  MENOS consultas não canceladas do médico (em QUALQUER lugar)
-  MENOS ausências (bloqueios) e feriados
-  A PARTIR de 24h de antecedência, até 180 dias
-```
-
-A mesma função mostra os horários na tela e confere na hora de gravar. E o banco tem a última
-palavra: o índice único `(medico_id, data_consulta, horario_ativo)` impede duas pessoas no mesmo
-horário mesmo se clicarem juntas.
+- **Faixa de preço:** a clínica escolhe a faixa de cada unidade ($ a $$$$) em Clínica → Unidades.
+  O que cada faixa quer dizer vem só de `App\Support\FaixaDePreco`. O usuário nunca vê valor em reais.
+- **Convênio:** o médico aceita (perfil dele, editado pela clínica) **e** a clínica liga "aceita
+  convênio" para ele naquela unidade. Toda tela com convênio mostra "Confirme na recepção se o seu
+  plano é aceito neste endereço."
+- **Unidade ativa ou desativada (12/10/2026):** a clínica edita os dados (nome, tipo, endereço,
+  telefone) e desativa/reativa a unidade em Clínica → Unidades. Desativada, ela some da busca, da
+  home e da página pública, e não recebe médico novo; os vínculos ficam como estavam e voltam a
+  aparecer ao reativar. Pode desativar a última unidade, e a mensagem avisa que a clínica saiu da
+  busca. Mudou o endereço? A coordenada é refeita (`Local::booted` e, com internet, o `Geocodificador`).
 
 ### 5.4 Regras que o sistema garante
 
-- Médico só aparece na busca com CRM **verificado** e conta ativa.
-- CRM, CNPJ e carteirinha são conferidos **na hora do cadastro**, na base simulada.
-- Preço **nunca** vem do formulário: é calculado no servidor.
-- Por convênio, só se o médico aceita aquele convênio; sempre com o aviso
-  "Confirme na recepção se o seu plano é aceito neste endereço".
-- Cancelar é sempre permitido; com menos de 24h fica marcado como tardio.
-- **O paciente não fica em dois lugares ao mesmo tempo** (29/09): não marca consulta que se
-  sobrepõe a outra consulta agendada dele, mesmo com outro médico (`Paciente::consultaNoHorario`).
-  A tela de confirmação já avisa qual consulta atrapalha; a gravação confere de novo.
-- **Nenhuma consulta é cancelada em silêncio:** ausência do médico, desvincular médico e
-  bloquear conta pedem confirmação explícita.
-- Comentário de avaliação é privado (só médico, clínica e admin veem). A nota é pública.
-- Acessibilidade do paciente só aparece para o **médico daquela consulta**, e só enquanto ela está
-  agendada (`ConsultaPolicy::verAcessibilidade`). A clínica não vê.
-- CRM é conferido **junto com o nome**. Médico rejeitado pelo admin só volta pelo "Desfazer rejeição".
-- Busca e perfil público só mostram lugar onde dá para agendar (`Vinculo::agendaveis()`, a mesma
-  regra do `recebeAgendamento()`) e só preço ativo de especialidade ativa (`precosOferecidos()`).
-- Conta bloqueada é deslogada na próxima página. Médico cadastrado pela clínica troca a senha
-  temporária antes de usar o sistema.
-- **O paciente pode excluir a própria conta** (30/09, LGPD) em "Meu perfil", com a senha atual e uma
-  confirmação. A conta é **anonimizada, não apagada** (`Paciente::excluirConta()`): consultas futuras
-  canceladas (o médico é avisado), acessibilidade apagada, carteirinhas apagadas (a já usada em consulta
-  fica sem número), o que o paciente escreveu nas consultas apagado, avaliações só com a nota, e nome,
-  e-mail, telefone, CPF, nascimento e sexo somem. Conta excluída nunca volta a ativa (CHECK no banco).
-- Várias regras também estão travadas **no próprio banco** (preço negativo, horário que termina
-  antes de começar, nota fora de 1 a 5, local com dois donos).
+- Médico só aparece em busca, listagem e perfil público com CRM **verificado**
+  (`Medico::visivel`), e só nos lugares públicos: vínculo ativo, unidade ativa e clínica com a
+  conta ativa (`Vinculo::publicos`).
+- CRM, CNPJ e carteirinha são conferidos **na hora do cadastro**, na base simulada. O CRM é
+  conferido **junto com o nome**.
+- Médico não tem login; quem edita o perfil é uma clínica onde ele atende (`MedicoPolicy`). Nome,
+  CRM e UF não mudam por tela.
+- A clínica só mexe nas próprias unidades e vínculos (`LocalPolicy`, `VinculoPolicy`).
+- Avaliação: só usuário logado, uma por local e uma por médico (avaliar de novo edita). A média é
+  recalculada só pelo model `Avaliacao`. O comentário é público, com o autor como "Ana L.".
+- Conta bloqueada é deslogada na próxima página, com a mensagem de conta bloqueada.
+- **O usuário pode excluir a própria conta** (30/09, LGPD) em "Meu perfil", com a senha atual e uma
+  confirmação. A conta é **anonimizada, não apagada** (`Usuario::excluirConta()`): carteirinhas,
+  foto e comentários somem, as notas ficam na média, e nome, e-mail, telefone, CPF, nascimento e
+  sexo são apagados. Conta excluída nunca volta a ativa (CHECK no banco).
+- Várias regras também estão travadas **no próprio banco** (horário que fecha antes de abrir, nota
+  fora de 1 a 5, faixa fora de 1 a 4, avaliação com dois alvos ou repetida).
 
 ### 5.5 E-mails
 
-> ⚠ **Desatualizado desde 01/10/2026** — o agendamento e a área do médico saíram (ver §6).
+O PointMed não manda e-mail próprio desde 01/10/2026 (os avisos e lembretes de consulta saíram com
+o agendamento). O único e-mail é o **"Esqueci minha senha"** do Breeze, que responde igual com ou
+sem conta cadastrada.
 
-Tudo passa por `App\Services\Notificador`, que **grava em `notificacoes_enviadas` antes de
-enviar** — o `UNIQUE (consulta_id, tipo)` garante que o mesmo aviso nunca sai duas vezes.
-
-| Quando | Para quem |
-|---|---|
-| agendou | paciente (confirmação) |
-| paciente cancelou | médico |
-| médico/clínica/admin cancelou | paciente (com o motivo) |
-| remarcou | médico (o horário antigo ficou livre) |
-| 24h antes | paciente (lembrete — `php artisan schedule:work`) |
-
-Em desenvolvimento (`MAIL_MAILER=log`) nada sai da máquina. **Enviar para caixa real só com
-aprovação do grupo, e só para e-mail de integrante.**
+- Na máquina de cada um: `MAIL_MAILER=log` — o e-mail vai para `storage/logs/laravel.log`.
+- No Render: pela API do Brevo (`App\Mail\BrevoTransport`, `MAIL_MAILER=brevo` + `BREVO_API_KEY`).
+  Falha no envio vira aviso na tela, não erro 500.
+- **Enviar para caixa real só com aprovação do grupo, e só para e-mail de integrante.**
 
 ### 5.6 Locais perto de você (busca por distância)
 
-Sem Google, Nominatim nem ViaCEP (precisariam de internet e chave na hora da banca):
-
 ```
-onde fica o LOCAL    → coordenada APROXIMADA do bairro ou do centro da cidade,
-                       de config/localizacao.php. O Local preenche sozinho ao salvar
-                       (Local::booted) — seeder, cadastro da clínica, unidades e consultório.
-onde está o PACIENTE → o navegador informa (botão "Usar minha localização"; é ele que pede
-                       a permissão) ou o centro da cidade escolhida na lista.
+onde fica o LOCAL    → ao salvar, a coordenada APROXIMADA do bairro ou do centro da cidade
+                       (config/localizacao.php, Local::booted). No cadastro e na edição de
+                       unidade, com internet, o Geocodificador troca pela do endereço (Nominatim).
+onde está o USUÁRIO  → o navegador informa (botão "Usar minha localização"; é ele que pede a
+                       permissão), o CEP digitado (ViaCEP + Nominatim; sem internet, o bairro/
+                       cidade do CEP) ou o centro da cidade escolhida na lista.
 distância            → linha reta (Haversine, App\Support\Localizacao), calculada em PHP.
 ```
 
-- `/locais` (`BuscaController@locais`): só local que dá para agendar (`Local::agendaveis()`, a mesma
-  regra da busca de médicos), do mais perto para o mais longe. Sem origem, em ordem alfabética.
-  Cidade fora de `config/localizacao.php` → local sem coordenada, no fim da lista, sem distância.
-- `/local/{id}` (`PerfilPublicoController@local`): endereço, horários, nota média, formas de pagamento
-  (com o aviso da recepção), especialidades com preço e os médicos disponíveis, cada um com
-  "Ver horários" (o agendamento de sempre). Local inativo ou de dono bloqueado → 404.
-- **Nota do local** = média das avaliações das consultas feitas ali (`Local::notas()`). Sem tabela
-  nova: a avaliação é por consulta, a consulta sabe o vínculo e o vínculo sabe o local.
-- A posição do paciente **não é salva**: vai só na URL da busca, arredondada (~100 m).
+- `/locais` (`BuscaController@locais`): só local público (`Local::publicos()`: unidade ativa, com
+  médico visível e clínica ativa), do mais perto para o mais longe. Filtros: especialidade,
+  convênio e raio de 5, 10 ou 20 km (só com origem). Sem origem, em ordem alfabética. Local sem
+  coordenada vai para o fim, sem distância (e fica fora quando há raio).
+- `/local/{id}` (`PerfilPublicoController@local`): endereço, horários, nota, faixa de preço,
+  convênios (com o aviso da recepção), especialidades, médicos e as avaliações. Unidade desativada
+  ou de clínica bloqueada → 404.
+- **Nota do local** = média das avaliações do local (`locais.media_avaliacoes`, recalculada pelo
+  model `Avaliacao`).
+- A posição do usuário **não é salva**: vai só na URL da busca, arredondada (~100 m). O CEP
+  digitado vira `lat`/`lng` arredondados num redirecionamento. Nos testes a internet fica desligada
+  (`LOCALIZACAO_EXTERNA=false` no `phpunit.xml`).
 
 ### 5.7 Testes automáticos
 
-`php artisan test` → **170 testes** em `tests/Feature/`: cadastros, carteirinhas, agendamento,
-médico, clínica, admin, segurança, e-mails, travas do banco e as telas. Rodam no banco
-`facilmed_testes` (criado sozinho), **nunca** no `facilmed`. Toda mudança de back-end vem com teste.
+`php artisan test` → **128 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
+distância, CEP com raio, avaliações, clínica (médicos, unidades, convênios), admin, exclusão de
+conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no banco
+`facilmed_testes` (criado sozinho), **nunca** no `facilmed`. Os de foto precisam da extensão
+**GD** ligada no `php.ini` do XAMPP. Toda mudança de back-end vem com teste.
 
 ---
 
@@ -440,7 +426,49 @@ médico, clínica, admin, segurança, e-mails, travas do banco e as telas. Rodam
 > Esta seção é a "passagem de bastão" entre quem trabalha no projeto (pessoas e IAs).
 > **Atualize ao terminar cada etapa.**
 
-**Atualizado em 08/10/2026.**
+**Atualizado em 12/10/2026.**
+
+**12/10 — unidade: editar e desativar; README revisado** (feito com o Claude a partir da `main`
+`e756f1c`; escolhas do Sidney: ao desativar, os médicos ficam ligados à unidade; pode desativar a
+última unidade, com aviso).
+- **Clínica → Unidades ganhou "Editar dados" e "Desativar/Reativar unidade".** Antes não dava para
+  corrigir endereço nem tirar uma unidade do ar, e a mensagem do horário mandava "desativar a
+  unidade" sem existir o botão. Rotas `clinica.unidades.atualizar` (PUT) e `clinica.unidades.status`
+  (PATCH, `ativo` 0/1), `AtualizarUnidadeRequest` (herda as regras do cadastro, autoriza pela
+  `LocalPolicy`), campos em `clinica/parciais/unidade-campos` (o "Nova unidade" usa o mesmo).
+- **Desativada:** some da busca, da home e da página pública (as regras já olhavam `locais.ativo`)
+  e não recebe médico novo. Os vínculos não mudam; em "Meus médicos" aparece a etiqueta "Unidade
+  desativada". Ao reativar, tudo volta. Sem nenhuma unidade ativa, a mensagem avisa que a clínica
+  saiu da busca.
+- **Endereço mudou → coordenada refeita:** `Local::booted` agora olha todos os campos do endereço
+  (`Local::CAMPOS_DO_ENDERECO`), e a edição chama o `Geocodificador` como o cadastro.
+- **Celular:** o campo "Nome da unidade" usava `grid-column: span 2` direto na tela e, com uma
+  coluna só, espremia o formulário "Nova unidade". Virou a classe `.fm-campo--duplo` (só a partir
+  de 720 px) em `crud.css`.
+- **Testes:** novo `UnidadeTest` (11). Conferido aqui: `migrate:fresh --seed` limpo e **127 testes**
+  passando; telas abertas no navegador (computador e celular), sem erro.
+- **README:** §2, §4, §5 e §7 reescritas para o sistema atual (sem consultas, lembretes, preços
+  nem área do médico); decisões antigas da §9 marcadas como substituídas. §10 e §11 ficam como
+  histórico.
+- **Menu dos painéis: o símbolo do PointMed é o botão** (pedido do Sidney; escolhas: no celular e
+  no computador; fechado mostra o símbolo e os ícones). Sempre do lado esquerdo.
+  - **Computador:** clicar no símbolo recolhe o menu para uma faixa de 76 px (símbolo + ícones; o nome
+    de cada item aparece ao passar o mouse). Clicar de novo abre (símbolo, nome "PointMed" e os nomes).
+    A escolha fica guardada no navegador (`localStorage`) e vale nas outras páginas.
+  - **Celular/tablet:** o símbolo fica no topo, no lugar do ☰ (o "PointMed" do meio do topo saiu).
+    Clicar abre a gaveta; clicar no símbolo da gaveta, no fundo escuro ou Esc fecha. O "X" saiu.
+  - Arquivos: `public/javas/menu.js` (novo, carregado antes do Alpine para o menu não "piscar"),
+    `layouts/painel`, `components/sidebar`, `painel.css` (o recorte `.fm-logo-recorte` saiu).
+    Imagens novas recortadas do `logo.png`, sem mudar o desenho: `imgs/marca/simbolo-icone.png`
+    (só o símbolo; virou também o ícone da aba) e `imgs/marca/nome.png` (só o "PointMed").
+  - O logo do painel levava para a home do site; agora ele abre/fecha o menu.
+  - Teste novo em `PaginasTest` (os três painéis carregam o botão). **127 → 128 testes.**
+- **Depois de puxar:** nada de banco (não tem migration nova). `php artisan optimize:clear` se a
+  tela de Unidades ou o menu não mudarem; no navegador, Ctrl + F5 para pegar o CSS novo.
+- **Pendente, não feito (o grupo decide):** tirar do `docker/entrypoint.sh` o passo 4a, que roda
+  `migrate:fresh --seed` se a tabela `consultas` existir. Já cumpriu o papel; se um dia `consultas`
+  voltar, o banco do site seria apagado a cada publicação.
+
 
 **07–08/10 — integração: a linha PointMed vira a principal** (decisão do grupo, comunicada pelo
 Lucas: "a versão do zip é a atual; agora é um site de rastreio de clínica"). Branch
@@ -820,224 +848,71 @@ o contrato da seção 7 (a tabela de preços e o perfil foram mantidos).
 
 ---
 
-## 7. Contrato das telas que faltam
+## 7. Mapa das telas internas
 
-> **28/09/2026: as 20 telas abaixo foram feitas.** O contrato continua valendo como documentação do
-> que cada controller manda para a view — se mudar um nome, mude aqui e no `TelasInternasTest`.
+> **Reescrito em 12/10/2026.** A versão anterior descrevia as telas de antes de 01/10 (agenda,
+> horários, preços e a área do médico), que não existem mais — está no histórico do Git.
 
-Para cada tela: o arquivo a criar, as variáveis que o controller **já manda** e os formulários
-(rota + campos). `tests/Feature/TelasInternasTest.php` confere que os controllers entregam
-essas variáveis — se mudar um nome, mude aqui e no teste.
+Os menus de cada tipo de conta ficam em `config/navegacao.php` (o nome da rota é o contrato: se
+renomear uma rota, ajuste lá). `tests/Feature/TelasInternasTest.php`, `TelasClinicaTest` e
+`TelasAdminTest` abrem cada tela e conferem o que o controller entrega.
 
-**Como fazer:** copie o esqueleto de uma tela que já existe — `paciente/perfil.blade.php`
-(formulários) ou `clinica/convenios.blade.php` (listas). Layout `layouts.painel`, classes `fm-*`
-de `public/css/painel.css` e `crud.css`. `session('sucesso')` e `session('erro')` aparecem
-sozinhas no layout; erro de campo com `@error('campo')`. Todo formulário tem `@csrf`
-(PUT/DELETE: `@method(...)`). Nada de regra de negócio na view.
+**Como fazer uma tela nova:** copie uma que já existe — `usuario/perfil.blade.php` (formulários) ou
+`clinica/convenios.blade.php` (listas). Layout `layouts.painel`, classes `fm-*` de
+`public/css/painel.css` e `crud.css`. `session('sucesso')` e `session('erro')` aparecem sozinhas no
+layout. Todo formulário tem `@csrf` (PUT/PATCH/DELETE: `@method(...)`). Nada de regra de negócio na view.
 
-### 7.1 Médico (menus em `config/navegacao.php`)
+### 7.1 Usuário (quem busca clínicas)
 
-> ⚠ **Desatualizado desde 01/10/2026** — o agendamento e a área do médico saíram (ver §6).
+| Menu | Rota (GET) | Tela | Ações |
+|---|---|---|---|
+| Início | `/usuario` | `usuario/dashboard` | busca rápida de locais (especialidade, cidade, convênio do plano) |
+| Perto de você | `/locais` | `busca/locais` | filtros; "Usar minha localização"; CEP com raio |
+| Encontrar médicos | `/buscar` | `busca/index` | filtros e ordem (avaliação, faixa, nome) |
+| Minhas avaliações | `/usuario/avaliacoes` | `usuario/avaliacoes` | DELETE `usuario.avaliacoes.excluir` |
+| Meu plano | `/usuario/planos` | `usuario/planos` | POST `usuario.planos.salvar` (carteirinha, conferida na base simulada); DELETE `usuario.planos.remover` |
+| Meu perfil | `/usuario/perfil` | `usuario/perfil` | PUT `usuario.perfil.atualizar`; foto (`foto.atualizar`/`foto.remover`); senha; DELETE `usuario.perfil.excluir` (excluir conta) |
 
-#### `medico/agenda.blade.php` — GET `/medico/agenda?data=AAAA-MM-DD&vinculo=id`
-| Variável | O quê |
-|---|---|
-| `$data` | Carbon do dia mostrado |
-| `$anterior`, `$seguinte` | `'AAAA-MM-DD'` para os botões ‹ › |
-| `$vinculos` | lugares onde atende (`->local->nome`) — filtro |
-| `$consultas` | do dia, por horário. Cada uma: `horario`, `status`, `paciente->user->name`, `paciente->acessibilidade?->descricao` (só dentro de `@can('verAcessibilidade', $c)`), `especialidade->nome`, `vinculo->local->nome`, `forma_pagamento`, `pacientePlano?->plano->convenio->nome`, `observacoes`, `inicio` |
-| `$resumo` | `['agendadas','realizadas','canceladas','faltas']` (números) |
+Avaliar fica nas páginas públicas: POST `avaliacoes.local` (`/local/{id}/avaliar`) e
+`avaliacoes.medico` (`/medico/{id}/avaliar`) — `estrelas` (1 a 5) e `comentario` (até 1000).
 
-Ações por consulta (botões só quando fizer sentido: realizada/falta depois do horário;
-cancelar antes):
-- POST `route('medico.agenda.realizada', $c)` — sem campos
-- POST `route('medico.agenda.falta', $c)` — sem campos
-- POST `route('medico.agenda.cancelar', $c)` — `motivo` (**obrigatório**, vai no e-mail ao paciente)
+### 7.2 Clínica / hospital
 
-Para esconder botão: `$c->podeSerCancelada()` e `! $c->inicio->isFuture()`.
+| Menu | Rota (GET) | Tela | Ações |
+|---|---|---|---|
+| Início | `/clinica` | `clinica/dashboard` | cartões (médicos, unidades ativas, nota) e pendência "unidades sem faixa" |
+| Meus médicos | `/clinica/medicos` | `clinica/medicos` | filtro por unidade; DELETE `clinica.medicos.desvincular`; médico em unidade desativada aparece com a etiqueta "Unidade desativada" |
+| ↳ Cadastrar médico | `/clinica/medicos/novo` | `clinica/medicos-form` | POST `clinica.medicos.salvar` — `name`, `cpf`, `crm`, `uf`, `local_id` (unidade **ativa** da clínica), `especialidades[]`, `aceita_particular`, `aceita_convenio`. CRM já cadastrado só ganha o vínculo |
+| ↳ Editar perfil | `/clinica/medicos/{id}/editar` | `clinica/medicos-editar` | PUT `clinica.medicos.atualizar` — `bio`, `anos_atuacao`, `telefone_profissional`, `especialidades[]`, `principal`, `convenios[]`, `foto`, `remover_foto` |
+| Especialidades | `/clinica/especialidades` | `clinica/especialidades` | POST `clinica.especialidades.salvar` — `nome` |
+| Unidades | `/clinica/unidades` | `clinica/unidades` | ver abaixo |
+| Convênios | `/clinica/convenios` | `clinica/convenios` | POST `clinica.convenios.salvar` — `vinculo_id`, `aceita_convenio` |
+| Avaliações | `/clinica/avaliacoes` | `clinica/avaliacoes` | só leitura (notas por unidade e por médico, com comentário) |
+| Perfil da clínica | `/clinica/perfil` | `clinica/perfil` | PUT `clinica.perfil.atualizar` — `name`, `nome_fantasia`, `descricao`, `telefone` (CNPJ e razão social não mudam); foto; senha |
 
-#### `medico/disponibilidade.blade.php` — GET `/medico/horarios` ("Meus horários")
-| Variável | O quê |
-|---|---|
-| `$vinculos` | cada um com `->local` e `->disponibilidades` (`dia_semana`, `hora_inicio`, `hora_fim`, `duracao_consulta_minutos`) |
-| `$dias` | `['domingo','segunda',...,'sabado']` |
-| `$duracoes` | `[15, 20, 30, 40, 45, 60]` |
+**Unidades** (`$locais` com `horarios` e `vinculos_count`; `$dias`):
+- POST `clinica.unidades.salvar` — nova unidade: `nome`, `tipo` (clinica/hospital), `cep`, `endereco`,
+  `numero`, `complemento`, `bairro`, `cidade`, `uf`, `telefone`, `faixa_preco`, `horarios[dia][abre|fecha]`.
+- PUT `clinica.unidades.atualizar` *(12/10)* — os mesmos campos, menos faixa e horários
+  (`AtualizarUnidadeRequest`). Os campos ficam em `clinica/parciais/unidade-campos`, usado pelos dois formulários.
+- PATCH `clinica.unidades.status` *(12/10)* — `ativo` (0 ou 1). Desativar não mexe nos vínculos.
+- PUT `clinica.unidades.faixa` — `faixa_preco` (vazio, ou 1 a 4).
+- PUT `clinica.unidades.horarios` — `horarios[dia][abre|fecha]` (dia vazio = fechado; pelo menos um dia aberto).
 
-- POST `route('medico.disponibilidade.salvar')` — `vinculo_id`, `dia_semana`, `hora_inicio` (HH:MM),
-  `hora_fim`, `duracao_consulta_minutos`. O back recusa: fora do funcionamento do local, choque com
-  outro bloco (inclusive em outro lugar), bloco menor que uma consulta.
-- DELETE `route('medico.disponibilidade.remover', $bloco)`. A mensagem avisa se sobraram consultas marcadas.
-- **Deixe claro na tela:** almoço = dois blocos no mesmo dia (08–12 e 14–18).
-
-#### `medico/bloqueios.blade.php` — GET `/medico/ausencias`
-| Variável | O quê |
-|---|---|
-| `$bloqueios` | `inicio`, `fim` (Carbon), `motivo`, `vinculo?->local->nome` (nulo = todos os lugares) |
-| `$vinculos` | para o select "onde" |
-
-- POST `route('medico.bloqueios.salvar')` — `inicio`, `fim` (`datetime-local`), `vinculo_id` (vazio = todos),
-  `motivo`, `cancelar_consultas` (checkbox). **Sem o checkbox, consultas no período NÃO são canceladas** —
-  a resposta volta com `session('erro')` explicando e `session('conflitos')` (ids).
-- DELETE `route('medico.bloqueios.remover', $b)`
-
-#### `medico/locais.blade.php` — GET `/medico/locais` ("Onde eu atendo")
-| Variável | O quê |
-|---|---|
-| `$vinculos` | `->local` (`nome`, `tipo`, `endereco_completo`, `clinica?->nome_fantasia`), `->precos`, `aceita_particular`, `aceita_convenio` |
-
-- POST `route('medico.locais.salvar')` — consultório próprio: `nome`, `cep`, `endereco`, `numero`,
-  `complemento`, `bairro`, `cidade`, `uf`, `telefone`, `aceita_convenio`,
-  `horarios[segunda][abre]`/`[fecha]`... (vazio = seg–sex 08–18). Redireciona para Preços.
-- Unidade de clínica: só leitura (quem vincula é a clínica).
-
-#### `medico/precos.blade.php` — GET `/medico/precos`
-| Variável | O quê |
-|---|---|
-| `$vinculos` | `->local` (`clinica_id` nulo = consultório próprio = editável), `->precos` (`especialidade->nome`, `valor`, `ativo`) |
-| `$especialidades` | as do médico |
-
-- POST `route('medico.precos.salvar')` — `vinculo_id`, `especialidade_id`, `valor` (aceita "250,00"), `ativo`.
-  Só no consultório próprio; em unidade de clínica dá 403 (mostre o valor só para leitura).
-
-#### `medico/avaliacoes.blade.php` — GET `/medico/avaliacoes`
-| Variável | O quê |
-|---|---|
-| `$medico` | `media_avaliacoes`, `total_avaliacoes` |
-| `$avaliacoes` | paginado: `estrelas`, `comentario` (visível aqui), `created_at`, `paciente->user->name`, `consulta->especialidade->nome` — use `{{ $avaliacoes->links() }}` |
-
-#### `medico/perfil.blade.php` — GET `/medico/perfil`
-| Variável | O quê |
-|---|---|
-| `$medico` | `crm`, `uf`, `bio`, `anos_atuacao`, `telefone_profissional`, `senha_temporaria`, `especialidades` (com `pivot->principal`), `convenios` |
-| `$especialidades`, `$convenios` | listas ativas para os checkboxes |
-
-- PUT `route('medico.perfil.atualizar')` — `name`, `crm`, `uf`, `bio`, `anos_atuacao`, `telefone_profissional`.
-  Trocar CRM/UF passa de novo pela base simulada.
-- PUT `route('medico.perfil.especialidades')` — `especialidades[]`, `principal`. Recusa tirar especialidade com consulta futura.
-- PUT `route('medico.perfil.convenios')` — `convenios[]`.
-- PUT `route('password.update')` — `current_password`, `password`, `password_confirmation` (erros no bag `updatePassword`,
-  sucesso em `session('status') === 'password-updated'`). Copie o bloco de `paciente/perfil.blade.php`.
-- **Senha temporária:** se `$medico->senha_temporaria`, mostre o formulário de senha em destaque — o
-  middleware `ExigirTrocaDeSenha` só deixa ele usar esta tela até trocar.
-
-
-### 7.2 Clínica
-
-#### `clinica/agenda.blade.php` — GET `/clinica/agenda?data=&local=&medico=&especialidade=`
-| Variável | O quê |
-|---|---|
-| `$data`, `$anterior`, `$seguinte` | como na agenda do médico |
-| `$consultas` | como na do médico + `medico->user->name` — **sem** acessibilidade (só o médico lê) |
-| `$filtros` | os filtros usados (para manter os selects) |
-| `$unidades`, `$medicos`, `$especialidades` | opções dos selects |
-| `$resumo` | `['agendadas','realizadas','canceladas','faltas']` |
-
-#### `clinica/medicos.blade.php` — GET `/clinica/medicos`
-| Variável | O quê |
-|---|---|
-| `$vinculos` | ativos: `medico->user->name`, `medico->crm/uf`, `medico->especialidades`, `local->nome`, `precos`, `aceita_convenio` |
-| `$unidades` | unidades ativas |
-
-- DELETE `route('clinica.medicos.desvincular', $vinculo)` — `cancelar_consultas` (checkbox). Sem ele, com consulta
-  futura, volta `session('erro')`.
-- Link para `route('clinica.medicos.novo')`.
-
-#### `clinica/medicos-form.blade.php` — GET `/clinica/medicos/novo`
-| Variável | O quê |
-|---|---|
-| `$especialidades`, `$unidades` | para os campos |
-
-- POST `route('clinica.medicos.salvar')` — `crm`, `uf`, `local_id`, `aceita_particular`, `aceita_convenio`
-  e, **só se o médico ainda não tiver conta**: `name`, `email`, `cpf`, `especialidades[]`.
-  Médico que já existe (mesmo CRM/UF) só ganha o vínculo.
-- Depois de salvar vai para Preços com `session('senha_temporaria')` (se foi conta nova) — **mostre em
-  destaque, uma vez só**, para a clínica repassar ao médico.
-
-#### `clinica/unidades.blade.php` — GET `/clinica/unidades`
-| Variável | O quê |
-|---|---|
-| `$locais` | `nome`, `tipo`, `endereco_completo`, `ativo`, `vinculos_count`, `horarios` (`dia_semana`, `abre`, `fecha`) |
-| `$dias` | dias da semana |
-
-- POST `route('clinica.unidades.salvar')` — `nome`, `tipo` (clinica/hospital), `cep`, `endereco`, `numero`,
-  `complemento`, `bairro`, `cidade`, `uf`, `telefone`, `horarios[dia][abre|fecha]`.
-- PUT `route('clinica.unidades.horarios', $local)` — `horarios[dia][abre|fecha]` (dia vazio = fechado).
-
-#### `clinica/precos.blade.php` — GET `/clinica/precos` (grade)
-| Variável | O quê |
-|---|---|
-| `$vinculos` | `medico->user->name`, `medico->especialidades`, `local->nome`, `precos` (`especialidade_id`, `valor`, `ativo`) |
-
-- POST `route('clinica.precos.salvar')` — **a grade inteira**: `precos[VINCULO_ID][ESPECIALIDADE_ID] = "250,00"`.
-  Campo vazio = aquela especialidade deixa de ser oferecida naquele lugar. Erros por célula:
-  `@error('precos.' . $v->id . '.' . $esp->id)`.
-
-#### `clinica/avaliacoes.blade.php` — GET `/clinica/avaliacoes`
-| Variável | O quê |
-|---|---|
-| `$media`, `$total` | da clínica |
-| `$porMedico` | `medico->user->name`, `media`, `total` |
-| `$avaliacoes` | paginado, **com** `comentario`, `medico->user->name`, `consulta->vinculo->local->nome` |
-
-#### `clinica/perfil.blade.php` — GET `/clinica/perfil`
-| Variável | O quê |
-|---|---|
-| `$clinica` | `cnpj` (só leitura — use `App\Support\Documento::cnpj()`), `razao_social` (só leitura), `nome_fantasia`, `descricao`, `telefone` |
-
-- PUT `route('clinica.perfil.atualizar')` — `name` (responsável), `nome_fantasia`, `descricao`, `telefone`.
-- Senha: bloco de `paciente/perfil.blade.php`.
-
+As que mexem numa unidade existente passam pela `LocalPolicy`: só a clínica dona dela. A nova unidade
+nasce sempre da clínica logada.
 
 ### 7.3 Admin
 
-#### `admin/usuarios.blade.php` — GET `/admin/usuarios?tipo=&status=&busca=`
-| Variável | O quê |
-|---|---|
-| `$usuarios` | paginado: `name`, `email`, `tipo`, `status`, `motivo_bloqueio`, `bloqueado_em` |
-
-- POST `route('admin.usuarios.bloquear', $u)` — `motivo` (mín. 10), `cancelar_consultas` (checkbox; com
-  consulta futura é obrigatório). Não aparece para admin.
-- POST `route('admin.usuarios.desbloquear', $u)` — só para `status = bloqueado`.
-
-#### `admin/verificacoes.blade.php` — GET `/admin/verificacoes`
-Desde 24/09 o CRM é conferido na base simulada no cadastro: a fila costuma estar vazia. Tela vira
-histórico + "rejeitar" (tirar da plataforma).
-
-| Variável | O quê |
-|---|---|
-| `$pendentes`, `$recentes` | médicos: `user->name`, `crm`, `uf`, `status_verificacao`, `verificado_em`, `motivo_rejeicao` |
-
-- POST `route('admin.verificacoes.aprovar', $m)`; POST `route('admin.verificacoes.rejeitar', $m)` — `motivo` (mín. 10).
-  Rejeitar cancela as consultas futuras dele. Texto da tela: "conferido na base simulada", **nunca** "validado no CFM".
-
-#### `admin/carteirinhas.blade.php` — GET `/admin/carteirinhas?status=`
-| Variável | O quê |
-|---|---|
-| `$pendentes` | (normalmente vazia) |
-| `$recentes` | paginado: `paciente->user->name`, `plano->convenio->nome`, `plano->nome`, `numero_carteirinha`, `status`, `validade` |
-
-#### `admin/clinicas.blade.php` — GET `/admin/clinicas?busca=`
-| Variável | O quê |
-|---|---|
-| `$clinicas` | paginado: `nome_fantasia`, `razao_social`, `cnpj`, `user->status`, `locais_count`, `locais` |
-
-#### `admin/especialidades.blade.php` — GET `/admin/especialidades`
-| Variável | O quê |
-|---|---|
-| `$especialidades` | `nome`, `slug`, `icone`, `destaque`, `ativo`, `medicos_count` |
-
-- POST `route('admin.especialidades.salvar')` — `nome`, `icone`, `destaque`.
-- PUT `route('admin.especialidades.atualizar', $esp)` — `nome`, `icone`, `destaque`, `ativo`. (A URL usa o
-  **slug**: `/admin/especialidades/cardiologia`.) Recusa desativar com consulta futura.
-
-#### `admin/consultas.blade.php` — GET `/admin/consultas?status=&medico=&de=&ate=`
-| Variável | O quê |
-|---|---|
-| `$consultas` | paginado: data, horário, status, `paciente->user->name`, `medico->user->name`, `especialidade->nome`, `vinculo->local->nome`, `valor` |
-| `$porStatus` | `['agendada' => n, ...]` com os filtros aplicados |
-| `$filtros` | filtros usados |
-
-**Não mostrar** observações nem acessibilidade aqui.
+| Menu | Rota (GET) | Tela | Ações |
+|---|---|---|---|
+| Início | `/admin` | `admin/dashboard` | cartões da plataforma |
+| Usuários | `/admin/usuarios?tipo=&status=&busca=` | `admin/usuarios` | POST `admin.usuarios.bloquear` — `motivo` (mín. 10; não aparece para admin nem conta excluída); POST `admin.usuarios.desbloquear` |
+| Verificar CNPJ | `/admin/cnpjs` | `admin/cnpjs` | só leitura: situação de cada CNPJ na base simulada |
+| Clínicas e hospitais | `/admin/clinicas?busca=` | `admin/clinicas` | só leitura (clínica e as unidades dela) |
+| Especialidades | `/admin/especialidades` | `admin/especialidades` | POST `admin.especialidades.salvar`; PUT `admin.especialidades.atualizar` (URL pelo **slug**) — `nome`, `icone`, `destaque`, `ativo` |
+| Convênios | `/admin/convenios` | `admin/convenios` | criar/editar convênio e plano; PATCH `admin.convenios.status` e `admin.convenios.planos.status` (desativar — **nunca apagar**) |
+| Meu perfil | `/admin/perfil` | `admin/perfil` | foto e senha |
 
 ---
 
@@ -1045,7 +920,9 @@ histórico + "rejeitar" (tirar da plataforma).
 
 **Marca:** mão envolvendo um coração, em dois azuis. Slogan: *"Sua saúde, conectada."*
 Arquivos em `public/imgs/marca/` (`logo-horizontal.png` no cabeçalho, `logocomslogan.png` no
-login, `simbolo.png`/`logosemslogan.png` no rodapé e favicon).
+login, `simbolo.png`/`logosemslogan.png` no rodapé e favicon). Nos painéis (12/10/2026):
+`simbolo-icone.png` (só o símbolo, botão do menu e ícone da aba) e `nome.png` (só o "PointMed"),
+recortados do `logo.png`.
 
 **Cores:** marinho `#183E9F` (menu, títulos), azul-claro `#1C9CE5` (destaque), azul do coração
 `#4A9BDA`. Cards brancos arredondados, fundo claro. Verde, roxo e rosa **só** para status —
@@ -1057,17 +934,18 @@ nunca como cor de marca.
 - Login → `public/css/login.css` (o login que o grupo fez)
 - Cadastro → `public/css/cadastro.css` + `public/javas/cadastro.js` (o cadastro que a Mari fez, 29/09;
   a tela de escolha com o `style1.css` do grupo, bloco `.pagina--escolha`)
-- Painéis → `public/css/painel.css` + `crud.css` + `agendamento.css`
+- Painéis → `public/css/painel.css` + `crud.css`; menu (o símbolo abre e fecha) em `public/javas/menu.js` (`agendamento.css` era das telas de consulta e não
+  é mais usado por nenhuma tela)
 - Menus de cada tipo de conta → `config/navegacao.php`. **Item de menu sem tela é link morto:**
   exames, receitas, atestados, prontuário, "resumo da saúde", financeiro e relatórios foram
   tirados dos mockups de propósito (fora do escopo).
 
 **Tom de voz:** direto, transparente, acolhedor sem ser íntimo, calmo. Segunda pessoa, frase
-curta: "Sua consulta está agendada para quinta, 14h." — não "Informamos que o seu agendamento
-foi processado com sucesso".
+curta: "Vida Plena - Centro foi desativada e não aparece mais na busca." — não "Informamos que a
+sua solicitação foi processada com sucesso".
 
 **Evitar:** qualquer palavra que sugira leitura clínica ("estável", "risco", "alerta de saúde");
-"validado" (o certo é **"conferido na base simulada do FacilMed"**); urgência fabricada
+"validado" (o certo é **"conferido na base simulada do PointMed"**); urgência fabricada
 ("últimas vagas"); jargão de sistema; emoji em e-mail.
 
 ---
@@ -1083,16 +961,16 @@ foi processado com sucesso".
 | **Bases simuladas** para CRM, CNPJ e carteirinha (24/09) | a API do CFM é paga (R$ 772/ano, exige CNPJ); carteirinha não tem padrão nacional nem API; a conferência humana travava a demonstração |
 | Convênios e planos **100% fictícios** (24/09) | não usar nome de operadora real sem contrato |
 | Convênio aceito pelo **médico**, não pelo endereço | simplifica o cadastro; o aviso "confirme na recepção" cobre a exceção |
-| Preço por **vínculo + especialidade** | o mesmo médico cobra diferente por especialidade e por endereço |
-| Cancelamento com menos de 24h **permitido e marcado** | bloquear só transforma cancelamento em falta, e falta perde o horário |
-| Comentário de avaliação **privado** | reduz risco jurídico de comentário público sobre profissional de saúde |
-| Acessibilidade em **texto**, sem upload de laudo | guardar laudo tornaria o projeto depositário de dado sensível de saúde |
+| ~~Preço por vínculo + especialidade~~ → **faixa de preço por unidade**, escolhida pela clínica (05/10) | sem agendamento não há valor a cobrar no sistema; a faixa ($ a $$$$) informa sem prometer preço exato |
+| Comentário de avaliação **público**, autor só como "Ana L." (05/10; antes era privado) | decisão do grupo: o comentário ajuda quem escolhe; o nome curto e sem foto protege quem escreveu |
+| Acessibilidade **saiu** (01/10) | só servia ao médico da consulta; sem consulta ficou sem finalidade, e a LGPD manda não guardar dado sensível sem finalidade |
 | Sem pagamento, SUS e teleconsulta | fora do que um TCC consegue fazer direito até 20/10 |
-| Paciente **não marca duas consultas que se sobrepõem** (29/09) | ninguém está em dois consultórios ao mesmo tempo; a vaga presa numa das duas era perdida para outro paciente |
-| Distância **sem serviço externo**: coordenada aproximada do bairro/cidade + localização do navegador (29/09) | Google e Nominatim precisam de internet e chave na banca, e o ViaCEP não dá coordenadas; em linha reta e "aproximada" para não prometer o caminho de carro |
+| **Sem agendamento** (01/10) e médico **sem conta** | decisão do grupo (documento "Modificações - 01/10"): o PointMed virou um guia de clínicas perto do usuário |
+| Distância com coordenada **aproximada** do bairro/cidade + localização do navegador (29/09); CEP com raio por ViaCEP + Nominatim, com a aproximada como reserva (07/10) | sem internet na banca a busca continua funcionando com a aproximada; em linha reta e "aproximada" para não prometer o caminho de carro |
 | Locais por distância numa **tela nova** (`/locais`) (29/09) | a busca de médicos já funcionava e tinha teste; as duas se ligam por link |
-| Exclusão de conta **anonimiza, não apaga** (30/09) | `consultas.paciente_id` é `restrictOnDelete` e a agenda, as notas e os números dos médicos dependem dessas consultas; a LGPD (art. 16) aceita guardar o dado anonimizado. Só o paciente se exclui: médico e clínica têm consultas e vínculos de outras pessoas, e para eles continua o "bloquear" do admin |
+| Exclusão de conta **anonimiza, não apaga** (30/09) | as notas entram na média dos locais e médicos; a LGPD (art. 16) aceita guardar o dado anonimizado. Só o usuário se exclui: a clínica tem médicos e unidades ligados a ela, e para ela continua o "bloquear" do admin |
 | Médico **não se cadastra sozinho**: entra pela clínica (29/09) | plano do app de 28/09; a clínica já cadastrava o médico conferindo o CRM na base simulada, então nada de regra mudou — só sumiu um caminho a mais |
+| Unidade **desativada guarda os médicos** e a clínica pode desativar a última (12/10) | desativar é reversível: reativar volta tudo como estava, sem a clínica refazer os vínculos; a mensagem avisa quando a clínica sai da busca |
 
 **Becos sem saída (não repita):** validar CRM de graça por código; validar carteirinha por
 algoritmo; consultar o COMPROVA da ANS; checar horário livre só com SELECT antes do INSERT
@@ -1135,6 +1013,8 @@ honesta: base simulada, e por que a API oficial ficou de fora).
 ---
 
 ## 11. Histórico de correções
+
+> Histórico: boa parte dos itens é da versão com agendamento (até 01/10/2026).
 
 Em 24/09/2026 o código **rodou pela primeira vez** (antes só tinha sido escrito). Foram achados
 e corrigidos 18 problemas — todos com teste automático hoje:

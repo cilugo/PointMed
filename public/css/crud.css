@@ -212,6 +212,10 @@
     .fm-form--duas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .fm-form--tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .fm-campo--largo { grid-column: 1 / -1; }
+    /* 12/10/2026: campo de 2 colunas só a partir daqui. Antes era style="grid-column: span 2"
+       na tela, e no celular (1 coluna) isso criava uma 2ª coluna e espremia o formulário. */
+    .fm-campo--duplo { grid-column: span 2; }
+    .fm-form--tres > .fm-form__acoes { grid-column: 1 / -1; }
     .fm-cobertura { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 

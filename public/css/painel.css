@@ -92,6 +92,7 @@
     flex-direction: column;
     background: #fff;
     border-right: 1px solid var(--fm-borda);
+    overflow-x: hidden;
     transform: translateX(-100%);
     transition: transform .25s ease;
 }
@@ -108,16 +109,22 @@
     padding: 22px 20px 18px;
 }
 
-.fm-sidebar__marca img { height: 34px; width: auto; }
-
-.fm-sidebar__fechar {
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    color: var(--fm-suave);
+/* 12/10/2026 — A marca é o BOTÃO do menu: símbolo + nome "PointMed".
+   Computador: recolhe/abre o menu. Celular: fecha a gaveta.
+   (public/javas/menu.js; imagens recortadas do logo.png em imgs/marca/.) */
+.fm-marca {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: -6px;
+    padding: 6px;
+    border-radius: 14px;
+    transition: background .15s ease;
 }
+
+.fm-marca:hover { background: #f0f6ff; }
+.fm-marca__simbolo { width: 40px; height: 40px; flex: none; }
+.fm-marca__nome { height: 27px; width: auto; }
 
 .fm-sidebar__nav {
     flex: 1;
@@ -138,6 +145,7 @@
     font-weight: 600;
     color: #3d5283;
     text-align: left;
+    white-space: nowrap;   /* o nome não quebra linha enquanto o menu abre/recolhe */
     transition: background .15s ease, color .15s ease;
 }
 
@@ -204,40 +212,10 @@
     color: var(--fm-azul);
 }
 
-.fm-topo__menu .fm-icone { width: 26px; height: 26px; }
+.fm-topo__menu img { width: 36px; height: 36px; }   /* 12/10: o símbolo no lugar do ☰ */
 
-.fm-topo__logo {
-    flex: 1;
-    display: flex;
-    justify-content: center;
-}
 
-.fm-topo__logo img { height: 30px; width: auto; }
-
-/* 24/09 — Recorte da logo.png. O PNG é 2000x2000 e o desenho ocupa só a
-   faixa x 501-1488 / y 1025-1204 (987 x 179). Esta "janela" com overflow
-   escondido mostra só o desenho, sem precisar de arquivo novo. Se um dia
-   exportarem a logo já recortada, apaguem este bloco e usem <img> direto. */
-.fm-logo-recorte {
-    position: relative;
-    display: block;
-    height: var(--fm-logo-altura, 34px);
-    aspect-ratio: 987 / 179; /* largura do "PointMed" no logo.png (05/10/2026; era 944 com "FacilMed") */
-    overflow: hidden;
-}
-
-.fm-logo-recorte img {
-    position: absolute;
-    height: calc(var(--fm-logo-altura, 34px) * 11.1732) !important; /* 2000 / 179 */
-    width: auto !important;
-    max-width: none !important;
-    left: calc(var(--fm-logo-altura, 34px) * -2.7989);  /* 501 / 179 */
-    top: calc(var(--fm-logo-altura, 34px) * -5.7263);   /* 1025 / 179 */
-}
-
-.fm-topo__logo .fm-logo-recorte { --fm-logo-altura: 30px; }
-
-.fm-usuario { position: relative; }
+.fm-usuario { position: relative; margin-left: auto; }
 
 .fm-usuario__botao {
     display: flex;
@@ -1010,13 +988,32 @@ a.fm-cartao--link:hover { border-color: var(--fm-borda-forte); }
 }
 
 @media (min-width: 1024px) {
-    .fm-sidebar { transform: none; }
-    .fm-sidebar__fechar { display: none; }
+    .fm-sidebar { transform: none; transition: width .2s ease; }
     .fm-fundo-menu { display: none !important; }
-    .fm-principal { margin-left: var(--fm-menu-largura); }
+    .fm-principal { margin-left: var(--fm-menu-largura); transition: margin-left .2s ease; }
 
     .fm-topo { justify-content: flex-end; height: 72px; padding: 0 32px; }
-    .fm-topo__menu, .fm-topo__logo { display: none; }
+    .fm-topo__menu { display: none; }
+
+    /* 12/10/2026 — Menu RECOLHIDO (clique no símbolo; classe no <html>,
+       posta por public/javas/menu.js). Fica só o símbolo e os ícones. */
+    :root.fm-menu-recolhido { --fm-menu-largura: 76px; }
+    .fm-menu-recolhido .fm-sidebar__marca { justify-content: center; padding: 22px 0 18px; }
+    .fm-menu-recolhido .fm-marca { margin: 0; }
+    .fm-menu-recolhido .fm-marca__nome { display: none; }
+    .fm-menu-recolhido .fm-sidebar__nav,
+    .fm-menu-recolhido .fm-sidebar__rodape { padding-left: 12px; padding-right: 12px; }
+    .fm-menu-recolhido .fm-nav { justify-content: center; padding: 11px 0; }
+    /* O nome do item some da VISTA, mas o leitor de tela continua lendo
+       (display: none tiraria do leitor também). */
+    .fm-menu-recolhido .fm-nav span {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+    }
 
     .fm-usuario__botao { padding: 5px 12px 5px 5px; border: 1px solid transparent; }
     .fm-usuario__botao:hover { background: #fff; border-color: var(--fm-borda); }
@@ -1057,7 +1054,7 @@ a.fm-cartao--link:hover { border-color: var(--fm-borda-forte); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .fm-sidebar, .fm-nav, .fm-pilula, .fm-aba, .fm-atalho, a.fm-cartao--link { transition: none; }
+    .fm-sidebar, .fm-principal, .fm-marca, .fm-nav, .fm-pilula, .fm-aba, .fm-atalho, a.fm-cartao--link { transition: none; }
 }
 
 /* ---------- 24/09/2026 ---------- */

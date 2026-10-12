@@ -155,6 +155,14 @@ Route::middleware(['auth', 'tipo:clinica'])->prefix('clinica')->name('clinica.')
     Route::put('/unidades/{local}/horarios', [Clinica\UnidadeController::class, 'salvarHorarios'])
         ->name('unidades.horarios');
 
+    // 12/10: editar os dados da unidade (nome, tipo, endereço, telefone) e
+    // desativar/reativar. Desativada, some da busca e da página pública, mas
+    // os médicos continuam ligados a ela e voltam ao reativar.
+    Route::put('/unidades/{local}', [Clinica\UnidadeController::class, 'atualizar'])
+        ->whereNumber('local')->name('unidades.atualizar');
+    Route::patch('/unidades/{local}/status', [Clinica\UnidadeController::class, 'alterarStatus'])
+        ->whereNumber('local')->name('unidades.status');
+
     // 05/10: a "Tabela de preços" saiu. A clínica escolhe a faixa ($ a $$$$)
     // de cada unidade (App\Support\FaixaDePreco).
     Route::put('/unidades/{local}/faixa', [Clinica\UnidadeController::class, 'salvarFaixa'])

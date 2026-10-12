@@ -19,6 +19,12 @@ class Local extends Model
         'latitude', 'longitude', 'faixa_preco',
     ];
 
+    /**
+     * Campos do endereço. Mudou algum, a coordenada é refeita (booted) - e,
+     * na edição da unidade (12/10), o Geocodificador busca a exata.
+     */
+    public const CAMPOS_DO_ENDERECO = ['cep', 'endereco', 'numero', 'bairro', 'cidade', 'uf'];
+
     protected $casts = [
         'ativo' => 'boolean', 'latitude' => 'float', 'longitude' => 'float',
         'media_avaliacoes' => 'decimal:2',
@@ -38,7 +44,7 @@ class Local extends Model
     protected static function booted(): void
     {
         static::saving(function (Local $local) {
-            $mudouEndereco = $local->isDirty(['cidade', 'uf', 'bairro']);
+            $mudouEndereco = $local->isDirty(self::CAMPOS_DO_ENDERECO);
 
             if (! $local->isDirty('latitude') && ($local->latitude === null || $mudouEndereco)) {
                 [$local->latitude, $local->longitude] = Localizacao::coordenadas($local->cidade, $local->uf, $local->bairro)
