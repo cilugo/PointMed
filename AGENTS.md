@@ -44,7 +44,7 @@ Ampliar o escopo por conta própria é errado, mesmo que a funcionalidade apare�
   `http://localhost/FacilMed`. Fuso `America/Sao_Paulo`.
 - **Não instalar dependência nova** (Composer ou npm) sem registrar a decisão no README §6 e ter aprovação.
 - "Estado bom": `php artisan migrate:fresh --seed` roda limpo **e** `php artisan test` passa
-  (135 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
+  (141 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
   ligada no `php.ini` do XAMPP).
 
 ## 3. Regras invioláveis de negócio e de dados
@@ -61,6 +61,9 @@ intenção de quem escreveu a tela.
   onde atende. `users.tipo` só aceita `usuario`, `clinica` e `admin` (o ENUM garante). Quem edita
   o perfil: clínica com vínculo ativo com ele (`MedicoPolicy`). Nome, CRM e UF não mudam por tela
   (foram conferidos na base simulada). **Nunca** recriar login, senha ou área de médico.
+- **Vincular médico que já existe exige o CPF dele** (12/10/2026). CRM/UF e nome são públicos; o
+  vínculo dá à clínica o direito de editar o perfil do médico em todas as clínicas. **Nunca** vincular
+  médico existente só pelo CRM/UF, nem mostrar o CPF do médico em tela pública.
 - **BASES SIMULADAS (decisão do grupo, 24/09/2026 — substitui a conferência humana de 18/09).**
   CRM, CNPJ e carteirinha são conferidos **automaticamente, na hora do cadastro**, nas tabelas
   `base_crms`, `base_cnpjs` e `base_carteirinhas` (`App\Services\BaseSimulada`). Bateu →

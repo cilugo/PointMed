@@ -256,7 +256,8 @@ Desde 29/09 o médico não se cadastra sozinho: `/cadastro/medico` só volta par
 | 998877 / SP | ❌ cassado |
 | 556677 / RJ | ❌ suspenso |
 | 123456 / SP | ❌ não existe na base |
-| 112233 / SP | já está no FacilMed (Dra. Helena): só ganha o vínculo com a unidade; se já atende nela, ❌ |
+| 112233 / SP + CPF **701.201.301-06** | já está no PointMed (Dra. Helena): só ganha o vínculo com a unidade; se já atende nela, ❌ |
+| 112233 / SP + outro CPF (ou sem CPF) | ❌ "Esse CPF não é o do médico com esse CRM" (desde 12/10: o CRM é público, o CPF não) |
 
 **Cadastro de clínica/hospital** (`/cadastro/clinica`)
 
@@ -317,7 +318,7 @@ FacilMed/                  ← a pasta continua com o nome antigo (ver o aviso n
 ├── lang/pt_BR/            ← mensagens em português
 ├── config/                ← configurações (navegacao.php = menus,
 │                             localizacao.php = coordenadas aproximadas das cidades)
-├── tests/Feature/         ← 135 testes automáticos
+├── tests/Feature/         ← 141 testes automáticos
 ├── storage/               ← logs e cache (gerado)
 ├── design/                ← prints e protótipos de tela (referência visual)
 └── prototipo-antigo/      ← versão antiga em PHP puro (não usada pelo sistema)
@@ -428,7 +429,7 @@ distância            → linha reta (Haversine, App\Support\Localizacao), calcu
 
 ### 5.7 Testes automáticos
 
-`php artisan test` → **135 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
+`php artisan test` → **141 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
 distância, CEP com raio, avaliações, clínica (médicos, unidades, convênios), admin, exclusão de
 conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no banco
 `facilmed_testes` (criado sozinho), **nunca** no `facilmed`. Os de foto precisam da extensão
@@ -442,6 +443,26 @@ conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no b
 > **Atualize ao terminar cada etapa.**
 
 **Atualizado em 12/10/2026.**
+
+**12/10 — segurança: clínica não "pega" mais o médico de outra clínica** (revisão de segurança, item 2;
+feito com o Claude, branch `seguranca/vinculo-medico-cpf`, a partir da `main` `9d936f0`; escolha:
+CPF, porque o nome também aparece na página pública).
+- **O problema:** em "Cadastrar médico", um médico que já existe era vinculado só pelo CRM/UF — e o
+  CRM/UF aparece na página pública do médico, na busca e na página do local. Qualquer clínica (inclusive
+  uma recém-cadastrada) vinculava a Dra. Helena a uma unidade dela e, pela `MedicoPolicy`, passava a
+  editar foto, apresentação, especialidades e convênios dela, em **todas** as clínicas.
+- **O que mudou:** o **CPF do médico** passou a ser obrigatório sempre, e para médico que já existe ele
+  precisa ser o dele (`CadastrarMedicoPelaClinicaRequest::after()`, comparado só com dígitos e com
+  `hash_equals`). O CPF é conferido antes da situação do CRM, então quem erra o CPF não descobre se o
+  médico está rejeitado. Na tela, o CPF subiu para o bloco "CRM, CPF e unidade". O CPF não aparece em
+  nenhuma tela pública.
+- **Limite de tentativas:** `POST /clinica/medicos` aceita 10 envios por minuto por clínica
+  (`throttle:10,1`), para ninguém ficar chutando CPF.
+- **O que não muda:** vínculos que já existem continuam; quem já editava continua editando. Os CPFs dos
+  8 médicos do seed estão no Git (`DadosFicticios`), então os médicos **de demonstração** continuam
+  vinculáveis por quem ler o código — o que importa é o médico de verdade cadastrado pelo site.
+- **Testes:** novo `VinculoMedicoTest` (6); o `ClinicaTest` passou a mandar o CPF do Dr. Rafael.
+  **141 testes** passando, `migrate:fresh --seed` limpo.
 
 **12/10 — segurança: a senha do README não abre mais o site no ar** (revisão de segurança feita com
 o Claude; branch `seguranca/senha-demonstracao`, a partir da `main` `4c49fab`).
@@ -464,9 +485,7 @@ o Claude; branch `seguranca/senha-demonstracao`, a partir da `main` `4c49fab`).
   segundo boot → 0 trocadas; sem a variável → senha aleatória e aviso no log).
 - **⚠ Antes de publicar:** criar `DEMO_PASSWORD` no Render (Environment). Sem ela, ninguém entra nas
   contas de demonstração (nem o grupo) até a variável ser preenchida.
-- **Ainda em aberto da mesma revisão** (próximos passos, por gravidade): clínica consegue assumir o
-  perfil de médico de outra clínica só com o CRM/UF (público) e editar bio, foto, especialidades e
-  convênios dele; cadastro revela se um CPF já tem conta; sem limite de tentativas no cadastro, na
+- **Ainda em aberto da mesma revisão** (próximos passos, por gravidade): cadastro revela se um CPF já tem conta; sem limite de tentativas no cadastro, na
   avaliação e na busca por CEP (que também não tem cache); trocar a senha não derruba as outras
   sessões; `SESSION_SECURE_COOKIE` ausente no Render; fotos guardam os dados EXIF.
 
@@ -924,7 +943,7 @@ Avaliar fica nas páginas públicas: POST `avaliacoes.local` (`/local/{id}/avali
 |---|---|---|---|
 | Início | `/clinica` | `clinica/dashboard` | cartões (médicos, unidades ativas, nota) e pendência "unidades sem faixa" |
 | Meus médicos | `/clinica/medicos` | `clinica/medicos` | filtro por unidade; DELETE `clinica.medicos.desvincular`; médico em unidade desativada aparece com a etiqueta "Unidade desativada" |
-| ↳ Cadastrar médico | `/clinica/medicos/novo` | `clinica/medicos-form` | POST `clinica.medicos.salvar` — `name`, `cpf`, `crm`, `uf`, `local_id` (unidade **ativa** da clínica), `especialidades[]`, `aceita_particular`, `aceita_convenio`. CRM já cadastrado só ganha o vínculo |
+| ↳ Cadastrar médico | `/clinica/medicos/novo` | `clinica/medicos-form` | POST `clinica.medicos.salvar` — `name`, `cpf`, `crm`, `uf`, `local_id` (unidade **ativa** da clínica), `especialidades[]`, `aceita_particular`, `aceita_convenio`. CRM já cadastrado só ganha o vínculo, e só com o `cpf` dele (12/10); 10 envios por minuto |
 | ↳ Editar perfil | `/clinica/medicos/{id}/editar` | `clinica/medicos-editar` | PUT `clinica.medicos.atualizar` — `bio`, `anos_atuacao`, `telefone_profissional`, `especialidades[]`, `principal`, `convenios[]`, `foto`, `remover_foto` |
 | Especialidades | `/clinica/especialidades` | `clinica/especialidades` | POST `clinica.especialidades.salvar` — `nome` |
 | Unidades | `/clinica/unidades` | `clinica/unidades` | ver abaixo |

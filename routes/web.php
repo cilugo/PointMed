@@ -138,7 +138,10 @@ Route::middleware(['auth', 'tipo:clinica'])->prefix('clinica')->name('clinica.')
     // unidade DESTA clínica.
     Route::get('/medicos', [Clinica\MedicoController::class, 'index'])->name('medicos');
     Route::get('/medicos/novo', [Clinica\MedicoController::class, 'form'])->name('medicos.novo');
-    Route::post('/medicos', [Clinica\MedicoController::class, 'salvar'])->name('medicos.salvar');
+    // 12/10: até 10 envios por minuto por clínica. Vincular médico que já
+    // existe pede o CPF dele; sem limite, dava para ficar chutando CPFs.
+    Route::post('/medicos', [Clinica\MedicoController::class, 'salvar'])
+        ->middleware('throttle:10,1')->name('medicos.salvar');
     Route::get('/medicos/{medico}/editar', [Clinica\MedicoController::class, 'editar'])
         ->whereNumber('medico')->name('medicos.editar');
     Route::put('/medicos/{medico}', [Clinica\MedicoController::class, 'atualizar'])

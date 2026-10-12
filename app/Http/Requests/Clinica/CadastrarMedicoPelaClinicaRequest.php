@@ -5,6 +5,7 @@ namespace App\Http\Requests\Clinica;
 use App\Models\Medico;
 use App\Rules\Cpf;
 use App\Rules\CrmNaBaseSimulada;
+use App\Support\Documento;
 use App\Support\Uf;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -13,8 +14,17 @@ use Illuminate\Validation\Validator;
 /**
  * Clínica cadastra (ou só vincula) um médico numa unidade dela.
  *
- * - CRM+UF já existe no PointMed → não cria outro médico: só o vínculo.
- *   Nome, CPF e especialidades são ignorados.
+ * - CRM+UF já existe no PointMed → não cria outro médico: só o vínculo,
+ *   e SÓ SE o CPF digitado for o do médico (12/10/2026). Nome e
+ *   especialidades são ignorados.
+ *
+ * POR QUE O CPF (12/10/2026, revisão de segurança): o CRM/UF aparece na
+ * página pública do médico. Antes, qualquer clínica digitava o CRM de um
+ * médico de OUTRA clínica, ganhava o vínculo e, com ele, o direito de
+ * editar o perfil dele (MedicoPolicy): foto, apresentação, especialidades
+ * e convênios - que aparecem em todas as clínicas onde ele atende. O CPF
+ * não aparece em tela pública nenhuma: quem trabalha com o médico tem, quem
+ * só leu o site não tem. O nome não serviria: também é público.
  * - CRM novo → precisa passar na base simulada (decisão de 24/09: CRM
  *   ativo, UF certa e nome igual ao do CRM) e aí name, cpf e
  *   especialidades são obrigatórios.
@@ -50,6 +60,8 @@ class CadastrarMedicoPelaClinicaRequest extends FormRequest
         $regras = [
             'crm'      => array_merge(['bail', 'required', 'digits_between:4,10'], $novo ? [new CrmNaBaseSimulada] : []),
             'uf'       => ['required', Rule::in(Uf::TODAS)],
+            // 12/10: obrigatório também para médico que já existe (ver o topo do arquivo).
+            'cpf'      => array_merge(['bail', 'required', new Cpf], $novo ? [Rule::unique('medicos', 'cpf')] : []),
             'local_id' => ['required', 'integer', Rule::exists('locais', 'id')
                 ->where('clinica_id', $this->user()->clinica?->id)->where('ativo', true)],
             'aceita_particular' => ['nullable', 'boolean'],
@@ -59,7 +71,6 @@ class CadastrarMedicoPelaClinicaRequest extends FormRequest
         if ($novo) {
             $regras += [
                 'name'  => ['required', 'string', 'min:3', 'max:255'],
-                'cpf'   => ['required', new Cpf, Rule::unique('medicos', 'cpf')],
                 'especialidades'   => ['required', 'array', 'min:1'],
                 'especialidades.*' => ['integer', Rule::exists('especialidades', 'id')->where('ativo', true)],
             ];
@@ -75,7 +86,11 @@ class CadastrarMedicoPelaClinicaRequest extends FormRequest
             if (! $existente || $v->errors()->isNotEmpty()) {
                 return;
             }
-            if ($existente->status_verificacao !== 'verificado') {
+            // Primeiro o CPF: sem ele, a clínica não fica sabendo nem a situação do médico.
+            // hash_equals: compara sem "vazar" pelo tempo de resposta quantos dígitos bateram.
+            if (! hash_equals(Documento::digitos($existente->cpf), (string) $this->input('cpf'))) {
+                $v->errors()->add('cpf', 'Esse CPF não é o do médico com esse CRM. Confira com o médico.');
+            } elseif ($existente->status_verificacao !== 'verificado') {
                 $v->errors()->add('crm', 'Esse médico está com o CRM pendente ou recusado e não pode ser vinculado.');
             } elseif ($existente->vinculos()->where('local_id', $this->input('local_id'))->where('ativo', true)->exists()) {
                 $v->errors()->add('local_id', 'Esse médico já atende nessa unidade.');
@@ -87,6 +102,7 @@ class CadastrarMedicoPelaClinicaRequest extends FormRequest
     {
         return [
             'local_id.exists'  => 'Escolha uma unidade ativa da sua clínica.',
+            'cpf.required'     => 'Digite o CPF do médico.',
             'cpf.unique'       => 'Já existe um médico com esse CPF.',
             'especialidades.required' => 'Escolha pelo menos uma especialidade.',
         ];
