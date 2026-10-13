@@ -1,7 +1,10 @@
 {{--
-    Admin → Usuários. Dados: Admin\UsuarioController@index (README §7.3).
+    Admin → Contas ativas / Contas bloqueadas / Contas excluídas.
+    Dados: Admin\UsuarioController (README §7.3). 13/10/2026: a mesma view
+    serve as três telas ($situacao = ativas | bloqueadas | excluidas); as abas
+    do topo levam de uma para a outra, com o total de cada.
 
-    Filtros (tipo, situação, busca por nome/e-mail) e, por conta:
+    Filtros (tipo, busca por nome/e-mail) e, por conta:
       - Bloquear: motivo obrigatório (mín. 10). Não aparece para administrador.
     01/10/2026: só usuário, clínica e admin têm conta (o médico é perfil),
     e a foto de perfil aparece no avatar.
@@ -15,7 +18,7 @@
 --}}
 @extends('layouts.painel')
 
-@section('titulo', 'Usuários')
+@section('titulo', $titulo)
 
 @push('head')
     <link rel="stylesheet" href="{{ asset('css/crud.css') }}">
@@ -25,23 +28,37 @@
     use App\Support\Formatador;
     $tipos = ['usuario' => 'Usuário', 'clinica' => 'Clínica', 'admin' => 'Administrador'];
     $situacoes = ['ativo' => ['Ativa', 'verde'], 'bloqueado' => ['Bloqueada', 'rosa'], 'inativo' => ['Inativa', 'cinza']];
+    // 13/10: ?busca[]=x na URL dava erro 500 no value do campo; só texto conta.
+    $abas = \App\Http\Controllers\Admin\UsuarioController::SITUACOES;
     $formVolta = old('_form');
-    $filtrando = request()->filled('tipo') || request()->filled('status') || request()->filled('busca');
+    $filtrando = request()->filled('tipo') || request()->filled('busca');
+    $vazio = ['ativas' => 'Nenhuma conta ativa', 'bloqueadas' => 'Nenhuma conta bloqueada', 'excluidas' => 'Nenhuma conta excluída'][$situacao];
 @endphp
 
 @section('conteudo')
 
     <div class="fm-pagina-topo">
         <div>
-            <h1 class="fm-titulo">Usuários</h1>
-            <p class="fm-subtitulo">Todas as contas da plataforma. Bloqueie quem não deve mais acessar.</p>
+            <h1 class="fm-titulo">{{ $titulo }}</h1>
+            <p class="fm-subtitulo">{{ $subtitulo }}</p>
         </div>
     </div>
 
-    <form method="GET" action="{{ route('admin.usuarios') }}" class="fm-filtros">
+    <nav class="fm-abas fm-abas--contas" aria-label="Situação das contas">
+        @foreach ($abas as $chave => [, $rotaAba])
+            <a href="{{ route($rotaAba, request()->only('tipo', 'busca')) }}"
+               class="fm-aba {{ $chave === $situacao ? 'is-ativa' : '' }}"
+               @if ($chave === $situacao) aria-current="page" @endif>
+                {{ ['ativas' => 'Ativas', 'bloqueadas' => 'Bloqueadas', 'excluidas' => 'Excluídas'][$chave] }}
+                <span class="fm-aba__total">{{ $contagem[$chave] }}</span>
+            </a>
+        @endforeach
+    </nav>
+
+    <form method="GET" action="{{ route($rota) }}" class="fm-filtros">
         <div class="fm-campo" style="flex-grow: 2;">
             <label for="busca">Buscar</label>
-            <input id="busca" name="busca" value="{{ request('busca') }}" placeholder="Nome ou e-mail" maxlength="100">
+            <input id="busca" name="busca" value="{{ is_string(request('busca')) ? request('busca') : '' }}" placeholder="Nome ou e-mail" maxlength="100">
         </div>
         <div class="fm-campo">
             <label for="tipo">Tipo</label>
@@ -52,18 +69,9 @@
                 @endforeach
             </select>
         </div>
-        <div class="fm-campo">
-            <label for="status">Situação</label>
-            <select id="status" name="status">
-                <option value="">Todas</option>
-                @foreach ($situacoes as $valor => [$rotulo])
-                    <option value="{{ $valor }}" @selected(request('status') === $valor)>{{ $rotulo }}</option>
-                @endforeach
-            </select>
-        </div>
         <button type="submit" class="fm-botao fm-botao--pequeno">Filtrar</button>
         @if ($filtrando)
-            <a href="{{ route('admin.usuarios') }}" class="fm-botao fm-botao--suave fm-botao--pequeno">Limpar</a>
+            <a href="{{ route($rota) }}" class="fm-botao fm-botao--suave fm-botao--pequeno">Limpar</a>
         @endif
     </form>
 
@@ -141,7 +149,7 @@
 
             {{ $usuarios->links('painel.parciais.paginacao') }}
         @else
-            <p class="fm-vazio">Nenhuma conta{{ $filtrando ? ' com esses filtros' : '' }}.</p>
+            <p class="fm-vazio">{{ $vazio }}{{ $filtrando ? ' com esses filtros' : '' }}.</p>
         @endif
     </section>
 

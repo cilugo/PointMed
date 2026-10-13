@@ -74,15 +74,17 @@
                 {{-- Fotos em public/imgs/sliderinicio/. [arquivo, legenda] --}}
                 @php
                     $slides = [
-                        // 05/10: legendas sobre o que o site faz (achar e comparar), não sobre atendimento
+                        // 05/10: legendas sobre o que o site faz (achar e comparar), não sobre atendimento.
+                        // 13/10: as fotos ficam (decisão: o grupo escolheu); três legendas foram trocadas
+                        // para combinar com a foto (si2 mãos dadas, si4 quarto de hospital, si8 criança).
                         ['si1.jpeg', 'Compare antes de escolher'],
-                        ['si2.jpeg', 'Médicos de várias especialidades'],
+                        ['si2.jpeg', 'Encontre quem atende perto de você'],
                         ['si3.jpeg', 'Hospitais e clínicas da sua região'],
-                        ['si4.jpeg', 'Encontre em poucos cliques'],
+                        ['si4.jpeg', 'Veja os hospitais da sua cidade'],
                         ['si5.jpeg', 'Encontre a especialidade certa'],
                         ['si6.jpeg', 'Use seu convênio ou particular'],
                         ['si7.jpeg', 'Veja a avaliação de outros usuários'],
-                        ['si8.jpeg', 'Clínicas perto de você'],
+                        ['si8.jpeg', 'Pediatria e outras especialidades'],
                         ['si9.jpeg', 'Escolha com a ajuda de quem já foi'],
                     ];
                 @endphp

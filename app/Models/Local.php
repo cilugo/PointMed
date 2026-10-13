@@ -16,8 +16,11 @@ class Local extends Model
     protected $fillable = [
         'clinica_id', 'nome', 'tipo', 'cep', 'endereco',
         'numero', 'complemento', 'bairro', 'cidade', 'uf', 'telefone', 'ativo',
-        'latitude', 'longitude', 'faixa_preco',
+        'latitude', 'longitude', 'faixa_preco', 'site',
     ];
+
+    /** Fotos na galeria de cada unidade (13/10/2026). */
+    public const MAX_FOTOS = 6;
 
     /**
      * Campos do endereço. Mudou algum, a coordenada é refeita (booted) - e,
@@ -71,6 +74,24 @@ class Local extends Model
     public function avaliacoes(): HasMany
     {
         return $this->hasMany(Avaliacao::class);
+    }
+
+    /** Galeria da unidade (13/10/2026), na ordem em que as fotos foram enviadas. */
+    public function fotos(): HasMany
+    {
+        return $this->hasMany(LocalFoto::class)->orderBy('ordem')->orderBy('id');
+    }
+
+    /** "https://www.clinica.com.br/contato" → "clinica.com.br" (para mostrar o link). */
+    public function getSiteCurtoAttribute(): ?string
+    {
+        if (! $this->site) {
+            return null;
+        }
+
+        $host = parse_url($this->site, PHP_URL_HOST) ?: $this->site;
+
+        return preg_replace('/^www\./i', '', $host);
     }
 
     /**

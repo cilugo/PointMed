@@ -57,6 +57,12 @@ class ClinicaSeeder extends Seeder
                 HorarioFuncionamento::updateOrCreate(['local_id' => $local->id, 'dia_semana' => $dia], ['abre' => '08:00', 'fecha' => '18:00']);
             }
             HorarioFuncionamento::updateOrCreate(['local_id' => $local->id, 'dia_semana' => 'sabado'], ['abre' => '08:00', 'fecha' => '12:00']);
+
+            // 13/10/2026: a foto da vitrine da home vira a 1ª foto da galeria
+            // da unidade (arquivo em public/imgs/inst, nunca apagado).
+            if ($arquivo = \App\Http\Controllers\HomeController::IMAGENS_DA_VITRINE[$nome] ?? null) {
+                $local->fotos()->firstOrCreate(['foto' => $arquivo], ['ordem' => 1]);
+            }
         }
 
         $this->command->info('3 clínicas e 3 hospitais fictícios. Senha: ' . DadosFicticios::textoDaSenha());

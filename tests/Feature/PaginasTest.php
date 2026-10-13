@@ -60,4 +60,19 @@ class PaginasTest extends TestCase
                 ->assertDontSee('fm-sidebar__fechar', false);
         }
     }
+
+    /**
+     * 13/10/2026: o rodapé do site não diz mais "Médicos, clínicas e convênios são
+     * fictícios", mas continua dizendo que é projeto acadêmico e sem contrato com
+     * operadora (AGENTS §3) — em toda página pública.
+     */
+    public function test_rodape_diz_projeto_academico_e_sem_contrato_com_operadora(): void
+    {
+        foreach (['/', '/locais', '/buscar', '/local/2'] as $url) {
+            $this->get($url)->assertOk()
+                ->assertSee('Projeto acadêmico (TCC)')
+                ->assertSee('Sem contrato com nenhuma operadora de saúde.')
+                ->assertDontSee('Médicos, clínicas e convênios são fictícios.');
+        }
+    }
 }

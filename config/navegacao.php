@@ -57,7 +57,10 @@ return [
      */
     'admin' => [
         ['rota' => 'admin.dashboard',      'label' => 'Início',              'icone' => 'home'],
-        ['rota' => 'admin.usuarios',       'label' => 'Usuários',            'icone' => 'users'],
+        // 13/10/2026: as contas em três telas (ativas, bloqueadas, excluídas).
+        ['rota' => 'admin.usuarios',          'label' => 'Contas ativas',     'icone' => 'user-check'],
+        ['rota' => 'admin.contas-bloqueadas', 'label' => 'Contas bloqueadas', 'icone' => 'user-x'],
+        ['rota' => 'admin.contas-excluidas',  'label' => 'Contas excluídas',  'icone' => 'x-circle'],
         ['rota' => 'admin.cnpjs',          'label' => 'Verificar CNPJ',      'icone' => 'badge'],
         ['rota' => 'admin.clinicas',       'label' => 'Clínicas e hospitais','icone' => 'building'],
         ['rota' => 'admin.especialidades', 'label' => 'Especialidades',      'icone' => 'tag'],

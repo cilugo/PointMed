@@ -20,7 +20,24 @@ class SalvarUnidadeRequest extends FormRequest
             'cep'      => preg_replace('/\D/', '', (string) $this->input('cep')),
             'telefone' => preg_replace('/\D/', '', (string) $this->input('telefone')),
             'uf'       => mb_strtoupper(trim((string) $this->input('uf'))),
+            'site'     => self::normalizarSite($this->input('site')),
         ]);
+    }
+
+    /**
+     * 13/10/2026: "www.clinica.com.br" vira "https://www.clinica.com.br" (quase
+     * ninguém digita o https://). Com outro esquema ("javascript:", "ftp:") fica
+     * como veio, e a regra url:http,https recusa.
+     */
+    public static function normalizarSite($site): ?string
+    {
+        $site = is_string($site) ? trim($site) : '';
+
+        if ($site === '') {
+            return null;
+        }
+
+        return preg_match('/^[a-z][a-z0-9+.-]*:/i', $site) ? $site : 'https://' . $site;
     }
 
     public function rules(): array
@@ -48,11 +65,15 @@ class SalvarUnidadeRequest extends FormRequest
             'cidade'      => ['required', 'string', 'max:100'],
             'uf'          => ['required', Rule::in(Uf::TODAS)],
             'telefone'    => ['nullable', 'digits_between:10,11'],
+            'site'        => ['nullable', 'string', 'max:255', 'url:http,https'],   // 13/10
         ];
     }
 
     public function messages(): array
     {
-        return ['cep.digits' => 'O CEP deve ter 8 dígitos.'] + HorariosDeFuncionamento::mensagens();
+        return [
+            'cep.digits' => 'O CEP deve ter 8 dígitos.',
+            'site.url'   => 'Digite o endereço do site, por exemplo www.suaclinica.com.br.',
+        ] + HorariosDeFuncionamento::mensagens();
     }
 }

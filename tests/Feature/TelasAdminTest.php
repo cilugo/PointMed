@@ -16,7 +16,7 @@ class TelasAdminTest extends TestCase
 {
     public function test_todas_as_telas_do_admin_abrem(): void
     {
-        foreach (['/admin', '/admin/usuarios', '/admin/cnpjs', '/admin/clinicas', '/admin/especialidades',
+        foreach (['/admin', '/admin/usuarios', '/admin/usuarios/bloqueadas', '/admin/usuarios/excluidas', '/admin/cnpjs', '/admin/clinicas', '/admin/especialidades',
                   '/admin/convenios', '/admin/perfil'] as $url) {
             $this->comoAdmin()->get($url)->assertOk();
         }
@@ -52,7 +52,7 @@ class TelasAdminTest extends TestCase
         $marcos = User::where('email', 'marcos@facilmed.test')->first();
         $marcos->forceFill(['status' => 'bloqueado', 'motivo_bloqueio' => 'Teste de bloqueio interno', 'bloqueado_em' => now()])->save();
 
-        $this->comoAdmin()->get('/admin/usuarios?status=bloqueado')
+        $this->comoAdmin()->get('/admin/usuarios/bloqueadas')
             ->assertOk()
             ->assertSee('Teste de bloqueio interno')
             ->assertSee(route('admin.usuarios.desbloquear', $marcos), false);

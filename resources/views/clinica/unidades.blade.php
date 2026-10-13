@@ -64,6 +64,44 @@
                     @if ($local->telefone)
                         <p class="fm-local__endereco"><x-icone nome="phone" /> {{ Formatador::telefone($local->telefone) }}</p>
                     @endif
+                    @if ($local->site)
+                        <p class="fm-local__endereco"><x-icone nome="arrow-right" /> <a href="{{ $local->site }}" target="_blank" rel="noopener noreferrer">{{ $local->site_curto }}</a></p>
+                    @endif
+
+                    {{-- 13/10/2026: galeria da unidade (até Local::MAX_FOTOS). --}}
+                    @php $fotoVolta = $formVolta === 'foto-' . $local->id; @endphp
+                    <div class="fm-galeria">
+                        <p class="fm-galeria__titulo">Fotos <span>{{ $local->fotos->count() }} de {{ \App\Models\Local::MAX_FOTOS }}</span></p>
+                        @if ($local->fotos->isNotEmpty())
+                            <ul class="fm-galeria__lista">
+                                @foreach ($local->fotos as $i => $foto)
+                                    <li>
+                                        <img src="{{ $foto->url }}" alt="Foto {{ $i + 1 }} de {{ $local->nome }}" loading="lazy">
+                                        <form method="POST" action="{{ route('clinica.unidades.fotos.remover', [$local, $foto]) }}"
+                                              onsubmit="return confirm('Remover esta foto da galeria?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="fm-galeria__remover" aria-label="Remover a foto {{ $i + 1 }}" title="Remover"><x-icone nome="x" /></button>
+                                        </form>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="fm-campo__ajuda">Sem fotos. A primeira aparece na página da unidade e na home.</p>
+                        @endif
+
+                        @if ($local->fotos->count() < \App\Models\Local::MAX_FOTOS)
+                            <form method="POST" action="{{ route('clinica.unidades.fotos.salvar', $local) }}" enctype="multipart/form-data" class="fm-galeria__enviar">
+                                @csrf
+                                <input type="hidden" name="_form" value="foto-{{ $local->id }}">
+                                <label for="foto-{{ $local->id }}" class="fm-sr">Foto da unidade</label>
+                                <input id="foto-{{ $local->id }}" type="file" name="foto" accept="image/jpeg,image/png,image/webp" required>
+                                <button type="submit" class="fm-pilula fm-pilula--pequena"><x-icone nome="plus" /> Enviar foto</button>
+                            </form>
+                            @if ($fotoVolta) @error('foto') <span class="fm-campo__erro">{{ $message }}</span> @enderror @endif
+                            <span class="fm-campo__ajuda">JPG, PNG ou WEBP de até 2 MB. Prefira foto da fachada ou da recepção, sem pessoas.</span>
+                        @endif
+                    </div>
 
                     {{-- 05/10/2026: a faixa de preço é escolhida aqui (a Tabela de preços saiu). --}}
                     <form method="POST" action="{{ route('clinica.unidades.faixa', $local) }}" class="fm-filtros" style="margin-top: 10px;">
@@ -131,6 +169,7 @@
                                 'complemento' => $local->complemento, 'bairro' => $local->bairro,
                                 'cidade' => $local->cidade, 'uf' => $local->uf,
                                 'telefone' => $local->telefone ? Formatador::telefone($local->telefone) : '',
+                                'site' => $local->site,
                             ],
                             'comOld' => $dadosVolta,
                         ])

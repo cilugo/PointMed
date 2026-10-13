@@ -61,3 +61,10 @@
     <input id="{{ $prefixo }}telefone" name="telefone" type="tel" inputmode="numeric" maxlength="15" value="{{ $v('telefone') }}">
     @if ($e('telefone')) <span class="fm-campo__erro">{{ $errors->first('telefone') }}</span> @endif
 </div>
+
+{{-- 13/10/2026: site da clínica/hospital (botão "Visitar o site" na página do local). --}}
+<div class="fm-campo fm-campo--duplo {{ $e('site') ? 'fm-campo--erro' : '' }}">
+    <label for="{{ $prefixo }}site">Site</label>
+    <input id="{{ $prefixo }}site" name="site" inputmode="url" maxlength="255" value="{{ $v('site') }}" placeholder="www.suaclinica.com.br">
+    @if ($e('site')) <span class="fm-campo__erro">{{ $errors->first('site') }}</span> @else <span class="fm-campo__ajuda">Opcional. Aparece na página pública da unidade.</span> @endif
+</div>

@@ -177,6 +177,14 @@ Route::middleware(['auth', 'tipo:clinica'])->prefix('clinica')->name('clinica.')
     // de cada unidade (App\Support\FaixaDePreco).
     Route::put('/unidades/{local}/faixa', [Clinica\UnidadeController::class, 'salvarFaixa'])
         ->whereNumber('local')->name('unidades.faixa');
+    // 13/10/2026: galeria da unidade (até 6 fotos). scopeBindings: a foto
+    // precisa ser DESTA unidade; o limite de envios é o mesmo da foto de perfil.
+    Route::scopeBindings()->group(function () {
+        Route::post('/unidades/{local}/fotos', [Clinica\FotoDaUnidadeController::class, 'salvar'])
+            ->whereNumber('local')->middleware('throttle:10,1')->name('unidades.fotos.salvar');
+        Route::delete('/unidades/{local}/fotos/{foto}', [Clinica\FotoDaUnidadeController::class, 'remover'])
+            ->whereNumber(['local', 'foto'])->name('unidades.fotos.remover');
+    });
 
     // Cobertura de convênios da clínica. O convênio é aceito pelo MÉDICO;
     // aqui a clínica só liga/desliga "aceita convênio" por médico e unidade.
@@ -198,6 +206,9 @@ Route::middleware(['auth', 'tipo:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/usuarios', [Admin\UsuarioController::class, 'index'])->name('usuarios');
+    // 13/10/2026: bloqueadas e excluídas em telas próprias (ver o UsuarioController).
+    Route::get('/usuarios/bloqueadas', [Admin\UsuarioController::class, 'bloqueadas'])->name('contas-bloqueadas');
+    Route::get('/usuarios/excluidas', [Admin\UsuarioController::class, 'excluidas'])->name('contas-excluidas');
     // Bloqueio exige motivo — bloqueio sem registro de quem e por quê
     // é ingovernável.
     Route::post('/usuarios/{user}/bloquear', [Admin\UsuarioController::class, 'bloquear'])

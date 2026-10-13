@@ -17,7 +17,7 @@ class UnidadeController extends Controller
     public function index()
     {
         return view('clinica.unidades', [
-            'locais' => auth()->user()->clinica->locais()->with('horarios')->withCount(['vinculos' => fn ($q) => $q->where('ativo', true)])->get(),
+            'locais' => auth()->user()->clinica->locais()->with(['horarios', 'fotos'])->withCount(['vinculos' => fn ($q) => $q->where('ativo', true)])->get(),
             'dias'   => HorarioFuncionamento::DIAS,
         ]);
     }
@@ -39,6 +39,7 @@ class UnidadeController extends Controller
                 'cidade'      => $dados['cidade'],
                 'uf'          => $dados['uf'],
                 'telefone'    => ($dados['telefone'] ?? '') ?: null,
+                'site'        => $dados['site'] ?? null,   // 13/10
                 'faixa_preco' => $dados['faixa_preco'] ?? null,
                 'ativo'       => true,
             ]);
@@ -79,6 +80,7 @@ class UnidadeController extends Controller
             'cidade'      => $dados['cidade'],
             'uf'          => $dados['uf'],
             'telefone'    => ($dados['telefone'] ?? '') ?: null,
+            'site'        => $dados['site'] ?? null,   // 13/10
         ]);
 
         if ($local->wasChanged(Local::CAMPOS_DO_ENDERECO)) {

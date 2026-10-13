@@ -784,6 +784,20 @@ a.fm-cartao--link:hover { border-color: var(--fm-borda-forte); }
 .fm-aba:hover { background: #e0edff; }
 .fm-aba.is-ativa { background: var(--fm-azul); color: #fff; }
 
+/* Abas das contas do admin (13/10/2026): com o total de cada situação. */
+.fm-abas--contas { margin: 10px 0 0; }
+@media (max-width: 520px) { .fm-abas--contas .fm-aba { padding: 7px 10px; } }
+.fm-aba { display: inline-flex; align-items: center; gap: 8px; }
+.fm-aba__total {
+    min-width: 22px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #fff;
+    color: var(--fm-azul);
+    font-size: 12px;
+    text-align: center;
+}
+
 /* ---------- Gráficos ---------- */
 
 .fm-grafico-bloco { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }

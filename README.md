@@ -319,7 +319,7 @@ FacilMed/                  ← a pasta continua com o nome antigo (ver o aviso n
 ├── lang/pt_BR/            ← mensagens em português
 ├── config/                ← configurações (navegacao.php = menus,
 │                             localizacao.php = coordenadas aproximadas das cidades)
-├── tests/Feature/         ← 154 testes automáticos
+├── tests/Feature/         ← 173 testes automáticos
 ├── storage/               ← logs e cache (gerado)
 ├── design/                ← prints e protótipos de tela (referência visual)
 └── prototipo-antigo/      ← versão antiga em PHP puro (não usada pelo sistema)
@@ -353,6 +353,7 @@ vínculo (Meus médicos → Desvincular) e o "aceita convênio" de cada um (Conv
   média das avaliações), `horarios_funcionamento`, `vinculos`.
 - **Especialidades e convênios:** `especialidades`, `convenios`, `planos`, `operadoras_ans`
   (opcional), `usuario_planos` (carteirinhas).
+- **Galeria e site da unidade (13/10):** `locais.site` e `local_fotos` (até 6 por unidade; a imagem fica em `fotos`).
 - **Avaliações:** `avaliacoes` — de um local **ou** de um médico, uma por usuário em cada.
 - **Fotos:** `fotos` (a imagem em base64; ver §6, 07/10).
 - **Bases simuladas:** `base_crms`, `base_cnpjs`, `base_carteirinhas` — fazem o papel do CFM,
@@ -430,7 +431,7 @@ distância            → linha reta (Haversine, App\Support\Localizacao), calcu
 
 ### 5.7 Testes automáticos
 
-`php artisan test` → **154 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
+`php artisan test` → **173 testes** em `tests/Feature/`: cadastros, carteirinhas, busca e
 distância, CEP com raio, avaliações, clínica (médicos, unidades, convênios), admin, exclusão de
 conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no banco
 `facilmed_testes` (criado sozinho), **nunca** no `facilmed`. Os de foto precisam da extensão
@@ -443,7 +444,7 @@ conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no b
 > Esta seção é a "passagem de bastão" entre quem trabalha no projeto (pessoas e IAs).
 > **Atualize ao terminar cada etapa.**
 
-**Atualizado em 12/10/2026 (noite).**
+**Atualizado em 13/10/2026.**
 
 **Pendências até a entrega (12/10, depois da revisão geral):**
 1. **⚠ Site no ar sem senha de demonstração.** O log do boot de 12/10 diz que a `DEMO_PASSWORD` está
@@ -451,15 +452,49 @@ conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no b
    ninguém entra nelas; o `ADMIN_EMAIL` também está vazio (não há admin extra). Criar a `DEMO_PASSWORD`
    no painel do Render (Environment) e publicar de novo (aba Actions → **Run workflow**). Conferir
    também `BREVO_API_KEY` e `MAIL_FROM_ADDRESS` (sem eles o "Esqueci minha senha" só vai para o log).
-2. **Decisões do grupo:** tirar ou não o "Médicos, clínicas e convênios são fictícios" do rodapé (os
-   avisos de convênio fictício/sem contrato com operadora são **obrigatórios**, AGENTS §3); as fotos e
-   legendas do carrossel da home; trazer ou não o que ficou de fora em 08/10 (admin com telas separadas
-   de contas ativas/bloqueadas/excluídas — hoje é o filtro de status em Usuários —, galeria e site do
-   local, barra Início/Perfil no celular). De 16/10 em diante não se constrói nada novo.
+2. *(Feito em 13/10: rodapé, carrossel, admin com três telas de contas, galeria e site da unidade —
+   ver a entrada de 13/10 abaixo.)* Ficou de fora só a barra Início/Perfil no celular. De 16/10 em
+   diante não se constrói nada novo.
 3. **Branches:** todas as do GitHub já estão na `main` ou foram superadas (`front/home-nova` foi
    absorvida pela home atual; `claude/compassionate-cori-dnjhvu` pela `integracao/pointmed`;
    `setup/ambiente-laravel` é de 20/09). Podem ser apagadas depois de o grupo concordar.
 4. Ensaio da apresentação com as contas do §3 (16–20/10).
+
+**13/10 — admin com três telas de contas, galeria e site da unidade, rodapé e carrossel** (feito com o
+Claude a partir da `main` `4920abc`, branch `revisao/13-10-telas`; pedido do Sidney: itens 1, 3 e 4 da
+lista de 12/10). Antes de começar: o zip que o Sidney mandou (`PointMed-main.zip`) é igual à `main`, e
+não havia commit nem branch nova no GitHub.
+- **Admin: Contas ativas, Contas bloqueadas e Contas excluídas** (decisão do Sidney de 01/10). O item
+  "Usuários" do menu virou três (`admin.usuarios`, `admin.contas-bloqueadas`,
+  `admin.contas-excluidas`; URLs `/admin/usuarios`, `/admin/usuarios/bloqueadas`,
+  `/admin/usuarios/excluidas`). A mesma view (`admin/usuarios`) serve as três, com abas no topo e o
+  total de cada; cada tela só tem a ação que cabe a ela (bloquear / desbloquear / nenhuma). Os nomes
+  das rotas novas não começam com `admin.usuarios` de propósito: o menu acende o item com
+  `routeIs('admin.usuarios*')`. Link antigo `?status=bloqueado|inativo` redireciona para a tela certa.
+  Bloquear e desbloquear dizem para qual tela a conta foi. **Achado no caminho:** `?busca[]=x` na URL
+  dava erro 500 nessa tela (o valor ia direto para o campo); corrigido. Teste novo `ContasAdminTest` (7).
+- **Galeria de fotos e site da unidade.** Migration nova `2026_10_13_000100_galeria_e_site_dos_locais`:
+  `locais.site` e a tabela `local_fotos` (a imagem fica na tabela `fotos`, como a foto de perfil; aqui só
+  a referência). Em Clínica → Unidades, cada unidade tem o quadro "Fotos (n de 6)" com miniaturas,
+  "Enviar foto" e o "x" para remover (`Clinica\FotoDaUnidadeController`, rotas
+  `clinica.unidades.fotos.salvar`/`.remover`, 10 envios por minuto, `scopeBindings` para a foto ser
+  daquela unidade, `lockForUpdate` para duas abas não passarem de 6). O campo **Site** entrou em
+  "Editar dados" e em "Nova unidade" (`www.x.com.br` vira `https://www.x.com.br`; só http/https). Na
+  página do local: galeria no topo (Alpine troca a foto pelas miniaturas) e o botão **Visitar o site**
+  (outra aba, `rel="noopener noreferrer nofollow"`). A home ("Hospitais e Clínicas") usa a 1ª foto da
+  galeria. As 6 unidades de demonstração ganham a foto da vitrine como 1ª foto — no seeder e também na
+  migration, porque no site no ar o seeder não roda. Teste novo `GaleriaUnidadeTest` (11).
+- **Rodapé do site:** saiu "Médicos, clínicas e convênios são fictícios" (pendência das notas de 05/10).
+  Ficou "Projeto acadêmico (TCC) — Etec ... Sem contrato com nenhuma operadora de saúde.", que é o que o
+  AGENTS §3 exige. Os avisos de convênio fictício dentro dos painéis (admin, clínica, Meu plano)
+  continuam. Teste em `PaginasTest`.
+- **Carrossel da home:** as 9 fotos ficaram (o grupo escolheu). Três legendas trocadas para combinar com
+  a foto: si2 "Encontre quem atende perto de você", si4 "Veja os hospitais da sua cidade", si8
+  "Pediatria e outras especialidades".
+- **Conferido:** `migrate:fresh --seed` limpo; a migration nova aplicada também num banco que já tinha
+  dados (as 6 unidades ganharam a foto); **173 testes** passando; telas novas abertas no navegador
+  (computador e celular), sem erro de JavaScript nem nada passando da largura.
+- **Depois de puxar:** `php artisan migrate` (ou `composer run banco-do-zero`) e Ctrl + F5.
 
 **12/10 (noite) — revisão geral: textos, cartões e limpeza** (feito com o Claude, branch
 `revisao/12-10-pendencias`, a partir da `main` `4a6f137`; pedido do Sidney: "olha todo o projeto e vê
@@ -958,6 +993,9 @@ Avaliar fica nas páginas públicas: POST `avaliacoes.local` (`/local/{id}/avali
   (`AtualizarUnidadeRequest`). Os campos ficam em `clinica/parciais/unidade-campos`, usado pelos dois formulários.
 - PATCH `clinica.unidades.status` *(12/10)* — `ativo` (0 ou 1). Desativar não mexe nos vínculos.
 - PUT `clinica.unidades.faixa` — `faixa_preco` (vazio, ou 1 a 4).
+- POST `clinica.unidades.fotos.salvar` *(13/10)* — `foto` (JPG/PNG/WEBP até 2 MB; até 6 por unidade).
+  DELETE `clinica.unidades.fotos.remover` — `/clinica/unidades/{local}/fotos/{foto}`.
+- O campo `site` *(13/10)* vai junto com os dados (nova unidade e "Editar dados"); só http/https.
 - PUT `clinica.unidades.horarios` — `horarios[dia][abre|fecha]` (dia vazio = fechado; pelo menos um dia aberto).
 
 As que mexem numa unidade existente passam pela `LocalPolicy`: só a clínica dona dela. A nova unidade
@@ -968,7 +1006,9 @@ nasce sempre da clínica logada.
 | Menu | Rota (GET) | Tela | Ações |
 |---|---|---|---|
 | Início | `/admin` | `admin/dashboard` | cartões da plataforma |
-| Usuários | `/admin/usuarios?tipo=&status=&busca=` | `admin/usuarios` | POST `admin.usuarios.bloquear` — `motivo` (mín. 10; não aparece para admin nem conta excluída); POST `admin.usuarios.desbloquear` |
+| Contas ativas *(13/10)* | `/admin/usuarios?tipo=&busca=` | `admin/usuarios` | POST `admin.usuarios.bloquear` — `motivo` (mín. 10; não aparece para admin) |
+| Contas bloqueadas *(13/10)* | `/admin/usuarios/bloqueadas` (`admin.contas-bloqueadas`) | `admin/usuarios` | POST `admin.usuarios.desbloquear` |
+| Contas excluídas *(13/10)* | `/admin/usuarios/excluidas` (`admin.contas-excluidas`) | `admin/usuarios` | só leitura (conta excluída não volta) |
 | Verificar CNPJ | `/admin/cnpjs` | `admin/cnpjs` | só leitura: situação de cada CNPJ na base simulada |
 | Clínicas e hospitais | `/admin/clinicas?busca=` | `admin/clinicas` | só leitura (clínica e as unidades dela) |
 | Especialidades | `/admin/especialidades` | `admin/especialidades` | POST `admin.especialidades.salvar`; PUT `admin.especialidades.atualizar` (URL pelo **slug**) — `nome`, `icone`, `destaque`, `ativo` |
@@ -1031,6 +1071,8 @@ sua solicitação foi processada com sucesso".
 | Locais por distância numa **tela nova** (`/locais`) (29/09) | a busca de médicos já funcionava e tinha teste; as duas se ligam por link |
 | Exclusão de conta **anonimiza, não apaga** (30/09) | as notas entram na média dos locais e médicos; a LGPD (art. 16) aceita guardar o dado anonimizado. Só o usuário se exclui: a clínica tem médicos e unidades ligados a ela, e para ela continua o "bloquear" do admin |
 | Médico **não se cadastra sozinho**: entra pela clínica (29/09) | plano do app de 28/09; a clínica já cadastrava o médico conferindo o CRM na base simulada, então nada de regra mudou — só sumiu um caminho a mais |
+| Galeria da unidade **no banco**, pela `FotoDePerfil` (13/10) | o Render apaga arquivo enviado; a mesma classe já tira os metadados (GPS) e limita tamanho e tipo |
+| Rodapé sem "dados fictícios", com "sem contrato com operadora" (13/10) | nota de 05/10 do Lucas; o aviso que o AGENTS §3 exige continua em toda página pública |
 | Unidade **desativada guarda os médicos** e a clínica pode desativar a última (12/10) | desativar é reversível: reativar volta tudo como estava, sem a clínica refazer os vínculos; a mensagem avisa quando a clínica sai da busca |
 
 **Becos sem saída (não repita):** validar CRM de graça por código; validar carteirinha por

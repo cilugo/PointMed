@@ -7,7 +7,7 @@
 > telas — está no `README.md`.** Leia o README (principalmente §4, §5 e §6) antes de editar.
 > Se algo aqui conflitar com outro arquivo, **este vence**.
 >
-> Última revisão: 12/10/2026 (unidade: a clínica edita e desativa, §3). Antes, 05/10/2026 (notas do Lucas): o projeto se chama **PointMed** (era FacilMed);
+> Última revisão: 13/10/2026 (galeria de fotos e site da unidade, §1/§3/§5; admin com três telas de contas). Antes, 12/10/2026 (unidade: a clínica edita e desativa, §3). Antes, 05/10/2026 (notas do Lucas): o projeto se chama **PointMed** (era FacilMed);
 > quem busca clínicas é o **usuário** (não "paciente"); a faixa de preço é escolhida pela clínica em
 > cada unidade; o comentário das avaliações é público. Antes, em 01/10/2026: o projeto deixou de
 > agendar consultas e o médico deixou de ter conta.
@@ -29,9 +29,10 @@ Ampliar o escopo por conta própria é errado, mesmo que a funcionalidade apare�
 - **Não agenda consultas** (desde 01/10/2026). Mostra locais, médicos, convênios, faixa de preço e
   avaliações. Agenda, horários do médico e lembretes por e-mail **não** voltam sem decisão do grupo.
 - **Não armazena documento médico** (nenhum upload de laudo). A acessibilidade do usuário saiu em
-  01/10/2026 junto com as consultas (sem finalidade, a LGPD manda não guardar). O único upload é a
-  **foto de perfil** (imagem JPG/PNG/WEBP até 2 MB, por `App\Support\FotoDePerfil`), guardada
-  **no banco** (tabela `fotos`, 07/10/2026) porque o Render apaga arquivo enviado a cada deploy.
+  01/10/2026 junto com as consultas (sem finalidade, a LGPD manda não guardar). Os únicos uploads são
+  a **foto de perfil** e as **fotos da galeria da unidade** (até 6 por unidade, 13/10/2026) — imagem
+  JPG/PNG/WEBP até 2 MB, sempre por `App\Support\FotoDePerfil`, guardada **no banco** (tabela
+  `fotos`, 07/10/2026) porque o Render apaga arquivo enviado a cada deploy.
 - **Não emite parecer clínico** de nenhum tipo (ver §3).
 - **Não é produto em produção**: TCC, roda localmente, dados fictícios. Entrega 20/10/2026.
 
@@ -44,7 +45,7 @@ Ampliar o escopo por conta própria é errado, mesmo que a funcionalidade apare�
   `http://localhost/FacilMed`. Fuso `America/Sao_Paulo`.
 - **Não instalar dependência nova** (Composer ou npm) sem registrar a decisão no README §6 e ter aprovação.
 - "Estado bom": `php artisan migrate:fresh --seed` roda limpo **e** `php artisan test` passa
-  (154 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
+  (173 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
   ligada no `php.ini` do XAMPP).
 
 ## 3. Regras invioláveis de negócio e de dados
@@ -82,6 +83,10 @@ intenção de quem escreveu a tela.
   planos e as carteirinhas dos usuários.
 - **Unidade (local) também não se apaga** (12/10/2026): a clínica desativa (`locais.ativo = false`)
   em Clínica → Unidades. Desativar **não** mexe nos vínculos — eles voltam a aparecer ao reativar.
+- **Galeria e site da unidade (13/10/2026):** até `Local::MAX_FOTOS` (6) fotos por unidade, só pela
+  clínica dona (`LocalPolicy::update`); apagar a foto da galeria apaga a imagem da tabela `fotos`
+  (`LocalFoto`). O site (`locais.site`) só aceita **http/https** — nunca `javascript:` — e todo link
+  para ele abre em outra aba com `rel="noopener noreferrer nofollow"`.
 
 **Nada de conteúdo clínico**
 

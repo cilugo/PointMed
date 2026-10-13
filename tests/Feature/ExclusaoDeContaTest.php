@@ -151,7 +151,7 @@ class ExclusaoDeContaTest extends TestCase
             ->assertStatus(422);
         $this->assertSame('inativo', $user->fresh()->status);
 
-        $this->comoAdmin()->get('/admin/usuarios?status=inativo')->assertOk()
+        $this->comoAdmin()->get('/admin/usuarios/excluidas')->assertOk()
             ->assertSee('Excluída pelo próprio usuário')
             ->assertDontSee('ana@facilmed.test');
     }
