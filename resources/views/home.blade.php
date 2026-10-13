@@ -251,7 +251,7 @@
     <section class="chamada">
         <div class="container">
             <div>
-                <h2>É clínica ou hospital?</h2>
+                <h2>É Clínica ou Hospital?</h2>
                 {{-- 29/09: o médico não se cadastra sozinho; a clínica cadastra os médicos dela. --}}
                 <p>Cadastre a sua clínica ou hospital, depois os seus médicos, e seja encontrado por usuários perto de você.</p>
             </div>
