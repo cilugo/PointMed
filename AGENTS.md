@@ -7,7 +7,7 @@
 > telas — está no `README.md`.** Leia o README (principalmente §4, §5 e §6) antes de editar.
 > Se algo aqui conflitar com outro arquivo, **este vence**.
 >
-> Última revisão: 05/10/2026 (notas do Lucas): o projeto se chama **PointMed** (era FacilMed);
+> Última revisão: 13/10/2026 (galeria de fotos e site da unidade, §1/§3/§5; admin com três telas de contas). Antes, 12/10/2026 (unidade: a clínica edita e desativa, §3). Antes, 05/10/2026 (notas do Lucas): o projeto se chama **PointMed** (era FacilMed);
 > quem busca clínicas é o **usuário** (não "paciente"); a faixa de preço é escolhida pela clínica em
 > cada unidade; o comentário das avaliações é público. Antes, em 01/10/2026: o projeto deixou de
 > agendar consultas e o médico deixou de ter conta.
@@ -29,9 +29,10 @@ Ampliar o escopo por conta própria é errado, mesmo que a funcionalidade apare�
 - **Não agenda consultas** (desde 01/10/2026). Mostra locais, médicos, convênios, faixa de preço e
   avaliações. Agenda, horários do médico e lembretes por e-mail **não** voltam sem decisão do grupo.
 - **Não armazena documento médico** (nenhum upload de laudo). A acessibilidade do usuário saiu em
-  01/10/2026 junto com as consultas (sem finalidade, a LGPD manda não guardar). O único upload é a
-  **foto de perfil** (imagem JPG/PNG/WEBP até 2 MB, por `App\Support\FotoDePerfil`), guardada
-  **no banco** (tabela `fotos`, 07/10/2026) porque o Render apaga arquivo enviado a cada deploy.
+  01/10/2026 junto com as consultas (sem finalidade, a LGPD manda não guardar). Os únicos uploads são
+  a **foto de perfil** e as **fotos da galeria da unidade** (até 6 por unidade, 13/10/2026) — imagem
+  JPG/PNG/WEBP até 2 MB, sempre por `App\Support\FotoDePerfil`, guardada **no banco** (tabela
+  `fotos`, 07/10/2026) porque o Render apaga arquivo enviado a cada deploy.
 - **Não emite parecer clínico** de nenhum tipo (ver §3).
 - **Não é produto em produção**: TCC, roda localmente, dados fictícios. Entrega 20/10/2026.
 
@@ -44,7 +45,7 @@ Ampliar o escopo por conta própria é errado, mesmo que a funcionalidade apare�
   `http://localhost/FacilMed`. Fuso `America/Sao_Paulo`.
 - **Não instalar dependência nova** (Composer ou npm) sem registrar a decisão no README §6 e ter aprovação.
 - "Estado bom": `php artisan migrate:fresh --seed` roda limpo **e** `php artisan test` passa
-  (116 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
+  (173 testes, banco `facilmed_testes` — nunca o `facilmed`; os de foto precisam da extensão GD
   ligada no `php.ini` do XAMPP).
 
 ## 3. Regras invioláveis de negócio e de dados
@@ -61,6 +62,9 @@ intenção de quem escreveu a tela.
   onde atende. `users.tipo` só aceita `usuario`, `clinica` e `admin` (o ENUM garante). Quem edita
   o perfil: clínica com vínculo ativo com ele (`MedicoPolicy`). Nome, CRM e UF não mudam por tela
   (foram conferidos na base simulada). **Nunca** recriar login, senha ou área de médico.
+- **Vincular médico que já existe exige o CPF dele** (12/10/2026). CRM/UF e nome são públicos; o
+  vínculo dá à clínica o direito de editar o perfil do médico em todas as clínicas. **Nunca** vincular
+  médico existente só pelo CRM/UF, nem mostrar o CPF do médico em tela pública.
 - **BASES SIMULADAS (decisão do grupo, 24/09/2026 — substitui a conferência humana de 18/09).**
   CRM, CNPJ e carteirinha são conferidos **automaticamente, na hora do cadastro**, nas tabelas
   `base_crms`, `base_cnpjs` e `base_carteirinhas` (`App\Services\BaseSimulada`). Bateu →
@@ -77,6 +81,12 @@ intenção de quem escreveu a tela.
   deixar claro na tela e no texto do TCC que a plataforma não tem contrato com nenhuma operadora.
 - **Nunca** apagar convênio ou plano: desativar (`ativo = false`). Apagar leva em cascata os
   planos e as carteirinhas dos usuários.
+- **Unidade (local) também não se apaga** (12/10/2026): a clínica desativa (`locais.ativo = false`)
+  em Clínica → Unidades. Desativar **não** mexe nos vínculos — eles voltam a aparecer ao reativar.
+- **Galeria e site da unidade (13/10/2026):** até `Local::MAX_FOTOS` (6) fotos por unidade, só pela
+  clínica dona (`LocalPolicy::update`); apagar a foto da galeria apaga a imagem da tabela `fotos`
+  (`LocalFoto`). O site (`locais.site`) só aceita **http/https** — nunca `javascript:` — e todo link
+  para ele abre em outra aba com `rel="noopener noreferrer nofollow"`.
 
 **Nada de conteúdo clínico**
 
@@ -117,7 +127,10 @@ intenção de quem escreveu a tela.
   nunca expor esses três em tela pública. A clínica avaliada (`Avaliacao::daClinica`) e o admin
   continuam vendo as avaliações nos painéis deles.
 - **Nunca** salvar a localização do usuário (banco, sessão, log). Ela vai só na URL da busca de
-  locais, arredondada, e serve só para ordenar por distância (29/09/2026).
+  locais, arredondada, e serve só para ordenar por distância (29/09/2026). Por isso o log do Apache
+  (`Dockerfile`) não guarda a query string nem o Referer, e nenhum `Log::` leva URL de busca
+  (12/10/2026). O cache do CEP (`Geocodificador`) guarda só "CEP → ponto", com a chave em hash,
+  sem ligação com quem buscou.
 - **Nunca** apagar usuário com `delete()` nem fazer um segundo caminho de exclusão de conta: a
   exclusão pedida pelo usuário (LGPD, 30/09/2026) é **só** por `Usuario::excluirConta()`, que
   anonimiza (a nota fica na média, o dado pessoal, o comentário e a foto somem). Conta excluída (`excluida_em` preenchido) nunca
@@ -181,8 +194,17 @@ ficam no banco desde 07/10/2026 e, nos testes, somem com a transação do `Refre
 - Nunca usar nem expor credencial real em log, código, commit ou handoff.
 - Senha sempre via `Hash::make` / `bcrypt`. Nunca em texto puro, nem em seeder de demonstração
   (no seeder, use senha fictícia óbvia e documente qual é).
+- **A senha de demonstração do README (`facilmed2026`) nunca vale no site no ar** (12/10/2026). O
+  repositório é público. No Render, as contas do seed usam a `DEMO_PASSWORD` (só no painel), via
+  `DadosFicticios::senha()` e o comando `facilmed:proteger-demonstracao` no boot. Seeder novo com
+  conta de acesso usa `DadosFicticios::senha()` e entra em `emailsDasContas()` — nunca senha fixa.
 - Toda query com input do usuário passa por Eloquent ou query bindings. Nunca concatenar string
   em SQL.
+- **Nunca** voltar a confiar no `X-Forwarded-Host` (`trustProxies` em `bootstrap/app.php`) nem tirar o
+  `URL::forceRootUrl` do site no ar (`AppServiceProvider`): com isso o link do "Esqueci minha senha"
+  podia sair apontando para o site de um golpista (12/10/2026).
+- Formulário novo que cria conta, manda e-mail, confere senha/documento ou grava no banco a partir de
+  visitante leva `throttle` na rota (12/10/2026). Os limites atuais estão no README §6.
 - Toda rota autenticada protegida por middleware **e** por Policy. Middleware diz "está logado";
   Policy diz "é dono disso". Faltar a segunda é o furo clássico: a clínica A editando o médico
   que só atende na clínica B, ou o usuário A apagando a avaliação do usuário B.

@@ -30,7 +30,9 @@
         <a href="{{ route('clinica.medicos.novo') }}" class="fm-botao"><x-icone nome="plus" /> Cadastrar médico</a>
     </div>
 
-    @if ($unidades->count() > 1)
+    {{-- 12/10: com filtro de uma unidade desativada (link "Médicos" em Unidades), mostra as abas
+         mesmo com uma unidade ativa só, para o "Todas" tirar o filtro. --}}
+    @if ($unidades->count() > 1 || $unidadeAtual)
         <nav class="fm-abas" aria-label="Filtrar por unidade" style="margin-top: 18px; flex-wrap: wrap;">
             <a href="{{ route('clinica.medicos') }}" class="fm-aba {{ $unidadeAtual ? '' : 'is-ativa' }}">Todas</a>
             @foreach ($unidades as $u)
@@ -51,7 +53,9 @@
                         </div>
                     </div>
 
-                    <p class="fm-local__endereco"><x-icone nome="building" /> {{ $v->local->nome }}</p>
+                    <p class="fm-local__endereco"><x-icone nome="building" /> {{ $v->local->nome }}
+                        @unless ($v->local->ativo) <span class="fm-etiqueta fm-etiqueta--cinza" title="Não aparece na busca até a unidade ser reativada">Unidade desativada</span> @endunless
+                    </p>
 
                     <div class="fm-chips" style="margin-top: 10px;">
                         @foreach ($v->medico->especialidades as $esp)

@@ -117,13 +117,14 @@ class ClinicaTest extends TestCase
     {
         // Dr. Rafael (223344/SP) passa a atender também na Vida Plena.
         $antes = Medico::count();
-        $this->novoMedico(['crm' => '223344', 'name' => '', 'email' => '', 'cpf' => ''])->assertSessionHasNoErrors();
+        // 12/10: precisa do CPF dele (701.201.302-89), ver VinculoMedicoTest.
+        $this->novoMedico(['crm' => '223344', 'name' => '', 'email' => '', 'cpf' => '701.201.302-89'])->assertSessionHasNoErrors();
 
         $this->assertSame($antes, Medico::count());
         $this->assertTrue(Vinculo::where('medico_id', 2)->where('local_id', 2)->where('ativo', true)->exists());
 
         // Vincular de novo na mesma unidade é recusado.
-        $this->novoMedico(['crm' => '223344', 'name' => '', 'email' => '', 'cpf' => ''])->assertSessionHasErrors('local_id');
+        $this->novoMedico(['crm' => '223344', 'name' => '', 'email' => '', 'cpf' => '70120130289'])->assertSessionHasErrors('local_id');
     }
 
     public function test_nao_vincula_em_unidade_de_outra_clinica(): void

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\Local;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -36,6 +37,39 @@ final class Geocodificador
             return null;
         }
 
+        // 12/10/2026 (revisão de segurança): a resposta fica guardada por 1 dia.
+        // Antes, cada busca por CEP fazia até 3 pedidos pela internet (até 6 s
+        // cada): poucas pessoas repetindo a busca travavam o servidor grátis e
+        // podiam fazer o Nominatim bloquear o PointMed. O que fica guardado é
+        // "este CEP fica neste ponto" - sem ligação com quem buscou - e a chave é
+        // um resumo (hash), então nem o CEP aparece escrito na tabela do cache.
+        // CEP não encontrado fica guardado só 1 hora (pode ter sido falha do serviço).
+        $chave = self::chaveDoCache($cep);
+        $guardado = Cache::get($chave);
+        if (is_array($guardado)) {
+            return $guardado['ponto'];
+        }
+
+        $ponto = self::consultarCep($cep);
+        Cache::put($chave, ['ponto' => $ponto], $ponto ? now()->addDay() : now()->addHour());
+
+        return $ponto;
+    }
+
+    /** O CEP já foi consultado há pouco? (aí a busca não sai para a internet nem conta no limite) */
+    public static function cepEmCache(string $cep): bool
+    {
+        return is_array(Cache::get(self::chaveDoCache(preg_replace('/\D/', '', $cep))));
+    }
+
+    private static function chaveDoCache(string $cep): string
+    {
+        return 'geocodificador:cep:' . hash('sha256', $cep);
+    }
+
+    /** A consulta de verdade (ViaCEP + Nominatim), sem cache. */
+    private static function consultarCep(string $cep): ?array
+    {
         $endereco = self::viaCep($cep);
         if ($endereco === null) {
             return null;
@@ -104,7 +138,8 @@ final class Geocodificador
 
             return is_array($dados) && empty($dados['erro']) && ! empty($dados['localidade']) ? $dados : null;
         } catch (Throwable $e) {
-            Log::info('ViaCEP fora do ar: ' . $e->getMessage());
+            // 12/10: só o tipo do erro. A mensagem traz a URL, com o CEP/endereço buscado (AGENTS §3).
+            Log::info('ViaCEP fora do ar: ' . class_basename($e));
 
             return null;
         }
@@ -131,7 +166,8 @@ final class Geocodificador
 
             return [(float) $primeiro['lat'], (float) $primeiro['lon']];
         } catch (Throwable $e) {
-            Log::info('Nominatim fora do ar: ' . $e->getMessage());
+            // 12/10: só o tipo do erro. A mensagem traz a URL, com o CEP/endereço buscado (AGENTS §3).
+            Log::info('Nominatim fora do ar: ' . class_basename($e));
 
             return null;
         }

@@ -22,10 +22,66 @@ namespace Database\Seeders;
  * fora do ambiente de desenvolvimento/apresentação.
  *
  * Senha de todas as contas: facilmed2026 (médico não tem conta desde 01/10).
+ * NO SITE NO AR NÃO (12/10/2026): lá vale a DEMO_PASSWORD do Render — ver senha().
  */
 final class DadosFicticios
 {
+    /**
+     * A senha PÚBLICA (está no README §3). Vale só na máquina de cada um e nos
+     * testes. Os seeders não usam esta constante direto: usam senha().
+     */
     public const SENHA = 'facilmed2026';
+
+    /** E-mail do admin de demonstração (AdminSeeder). */
+    public const EMAIL_ADMIN = 'admin@facilmed.test';
+
+    /** Sorteada uma vez por execução, quando o site no ar está sem DEMO_PASSWORD. */
+    private static ?string $sorteada = null;
+
+    /**
+     * A senha que os seeders gravam nas contas de demonstração (12/10/2026).
+     *
+     *  - DEMO_PASSWORD preenchida (Render)  → ela;
+     *  - site no ar SEM DEMO_PASSWORD        → uma senha aleatória que ninguém
+     *    sabe (melhor ninguém entrar do que todo mundo entrar com a do README);
+     *  - máquina do aluno e testes           → "facilmed2026", como sempre.
+     */
+    public static function senha(): string
+    {
+        $configurada = (string) config('app.senha_demonstracao');
+
+        if ($configurada !== '') {
+            return $configurada;
+        }
+
+        if (app()->isProduction()) {
+            return self::$sorteada ??= \Illuminate\Support\Str::password(32);
+        }
+
+        return self::SENHA;
+    }
+
+    /** O que os seeders escrevem na tela: nunca a senha do site no ar (ela iria para o log do Render). */
+    public static function textoDaSenha(): string
+    {
+        if (self::senha() === self::SENHA) {
+            return self::SENHA;
+        }
+
+        return (string) config('app.senha_demonstracao') !== ''
+            ? 'a da variável DEMO_PASSWORD (não aparece no log)'
+            : 'aleatória - DEMO_PASSWORD está vazia, ninguém entra nesta conta';
+    }
+
+    /** Todas as contas de demonstração que têm senha: admin, clínicas/hospitais e usuários. */
+    public static function emailsDasContas(): array
+    {
+        return array_merge(
+            [self::EMAIL_ADMIN],
+            array_column(self::ESTABELECIMENTOS, 0),
+            array_column(self::USUARIOS, 'email'),
+        );
+    }
 
     /**
      * 3 clínicas + 3 hospitais. Cada um é uma conta de "clínica" com UMA
@@ -41,7 +97,7 @@ final class DadosFicticios
             'Clínica de bairro com foco em atendimento de rotina e acompanhamento.',
             ['Vida Plena - Centro', 'clinica', '12210100', 'Rua Quinze de Novembro', '480', 'Centro', 'São José dos Campos', 'SP']],
         ['contato@aurora.test', 'Centro Médico Aurora S/A', 'Centro Médico Aurora', '41100003000184', '1239452000',
-            'Centro médico com corpo clínico multidisciplinar e agenda estendida.',
+            'Centro médico com corpo clínico multidisciplinar e atendimento em horário estendido.',
             ['Aurora - Vila Ema', 'clinica', '12243700', 'Rua República do Iraque', '90', 'Vila Ema', 'São José dos Campos', 'SP']],
         ['contato@santaclara.test', 'Hospital Santa Clara de Taubaté LTDA', 'Hospital Santa Clara', '42200001000120', '1236323000',
             'Hospital geral com ambulatório de especialidades.',

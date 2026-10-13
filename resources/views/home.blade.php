@@ -3,7 +3,10 @@
 
     Visual e estrutura vêm da home que o grupo fez no protótipo
     (paginas/home.html + css/home.css), agora com dados do banco:
-    especialidades reais, médicos verificados e a busca funcionando.
+    especialidades reais, médicos com CRM conferido e a busca funcionando.
+    12/10/2026: o contador dizia "médicos verificados"; virou "com CRM conferido"
+    (a conferência é na base simulada, AGENTS §3 — nada de dar a entender
+    que alguém verificou de verdade).
 
     01/10/2026: o PointMed não agenda mais consultas. Os textos falam em
     encontrar e avaliar locais e médicos; a busca do topo leva para os
@@ -61,7 +64,7 @@
                 </form>
 
                 <div class="hero-numeros">
-                    <div><strong>{{ $totais['medicos'] }}</strong><span>médicos verificados</span></div>
+                    <div><strong>{{ $totais['medicos'] }}</strong><span>médicos com CRM conferido</span></div>
                     <div><strong>{{ $totais['unidades'] }}</strong><span>clínicas e hospitais</span></div>
                     <div><strong>{{ $totais['cidades'] }}</strong><span>{{ $totais['cidades'] === 1 ? 'cidade' : 'cidades' }}</span></div>
                 </div>
@@ -71,15 +74,17 @@
                 {{-- Fotos em public/imgs/sliderinicio/. [arquivo, legenda] --}}
                 @php
                     $slides = [
-                        // 05/10: legendas sobre o que o site faz (achar e comparar), não sobre atendimento
+                        // 05/10: legendas sobre o que o site faz (achar e comparar), não sobre atendimento.
+                        // 13/10: as fotos ficam (decisão: o grupo escolheu); três legendas foram trocadas
+                        // para combinar com a foto (si2 mãos dadas, si4 quarto de hospital, si8 criança).
                         ['si1.jpeg', 'Compare antes de escolher'],
-                        ['si2.jpeg', 'Médicos de várias especialidades'],
+                        ['si2.jpeg', 'Encontre quem atende perto de você'],
                         ['si3.jpeg', 'Hospitais e clínicas da sua região'],
-                        ['si4.jpeg', 'Encontre em poucos cliques'],
+                        ['si4.jpeg', 'Veja os hospitais da sua cidade'],
                         ['si5.jpeg', 'Encontre a especialidade certa'],
                         ['si6.jpeg', 'Use seu convênio ou particular'],
                         ['si7.jpeg', 'Veja a avaliação de outros usuários'],
-                        ['si8.jpeg', 'Clínicas perto de você'],
+                        ['si8.jpeg', 'Pediatria e outras especialidades'],
                         ['si9.jpeg', 'Escolha com a ajuda de quem já foi'],
                     ];
                 @endphp

@@ -8,6 +8,9 @@
     01/10/2026: sem agendamento. O usuário avalia o local aqui mesmo
     (publico/parciais/avaliar). 05/10: comentários públicos
     (publico/parciais/avaliacoes).
+
+    13/10/2026: galeria de fotos (até 6, enviadas pela clínica em Unidades) no
+    topo e o site da clínica/hospital ("Visitar o site", abre em outra aba).
 --}}
 @extends('layouts.site')
 
@@ -32,6 +35,31 @@
 
     <div class="perfil-grade">
         <div>
+            @if ($local->fotos->isNotEmpty())
+                {{-- 13/10/2026: galeria. Alpine troca a foto grande pelas miniaturas. --}}
+                <section class="caixa galeria" x-data="{ atual: 0 }" aria-label="Fotos de {{ $local->nome }}">
+                    <div class="galeria__principal">
+                        @foreach ($local->fotos as $i => $foto)
+                            <img src="{{ $foto->url }}" alt="Foto {{ $i + 1 }} de {{ $local->nome }}"
+                                 x-show="atual === {{ $i }}" @if ($i > 0) x-cloak @endif @if ($i > 0) loading="lazy" @endif>
+                        @endforeach
+                        @if ($local->fotos->count() > 1)
+                            <span class="galeria__contador" x-text="(atual + 1) + ' / {{ $local->fotos->count() }}'">1 / {{ $local->fotos->count() }}</span>
+                        @endif
+                    </div>
+                    @if ($local->fotos->count() > 1)
+                        <div class="galeria__miniaturas">
+                            @foreach ($local->fotos as $i => $foto)
+                                <button type="button" @click="atual = {{ $i }}" :class="{ 'is-ativa': atual === {{ $i }} }"
+                                        class="{{ $i === 0 ? 'is-ativa' : '' }}" aria-label="Ver a foto {{ $i + 1 }}">
+                                    <img src="{{ $foto->url }}" alt="" loading="lazy">
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
+                </section>
+            @endif
+
             <section class="caixa">
                 <div class="perfil-cabeca">
                     <div class="avatar avatar--grande" style="background-color: #183e9f;">
@@ -58,7 +86,16 @@
                         </p>
                     </div>
                 </div>
-                <a href="#medicos" class="btn btn-primary" style="margin-top: 18px;"><x-icone nome="doctors" /> Ver médicos disponíveis</a>
+                <div class="local-botoes">
+                    <a href="#medicos" class="btn btn-primary"><x-icone nome="doctors" /> Ver médicos disponíveis</a>
+                    @if ($local->site)
+                        {{-- Link de fora: abre em outra aba; noopener/noreferrer = o site não mexe nesta página
+                             nem fica sabendo de onde a pessoa veio; nofollow = não é indicação do PointMed. --}}
+                        <a href="{{ $local->site }}" class="btn btn-outline" target="_blank" rel="noopener noreferrer nofollow">
+                            <x-icone nome="arrow-right" /> Visitar o site
+                        </a>
+                    @endif
+                </div>
             </section>
 
             <section class="caixa">
@@ -69,6 +106,9 @@
                 @endif
                 @if ($local->telefone)
                     <p class="local__endereco">Telefone: {{ \App\Support\Formatador::telefone($local->telefone) }}</p>
+                @endif
+                @if ($local->site)
+                    <p class="local__endereco">Site: <a href="{{ $local->site }}" target="_blank" rel="noopener noreferrer nofollow" style="text-decoration: underline;">{{ $local->site_curto }}</a></p>
                 @endif
                 @if ($horarios->isNotEmpty())
                     <h3 class="local-subtitulo">Horário de funcionamento</h3>

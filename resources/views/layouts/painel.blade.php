@@ -5,8 +5,14 @@
         @section('titulo', 'Início')
         @section('conteudo')  ...  @endsection
 
-    Estrutura: menu lateral fixo no computador e "gaveta" no celular, barra
-    de topo com o usuário, e a área de conteúdo.
+    Estrutura: menu lateral no computador e "gaveta" no celular, barra de
+    topo com o usuário, e a área de conteúdo.
+
+    12/10/2026: o SÍMBOLO do PointMed é o botão do menu, sempre do lado
+    esquerdo. No computador ele recolhe/abre o menu lateral (fechado: só o
+    símbolo e os ícones; aberto: símbolo, nome e os nomes dos itens). No
+    celular ele fica no topo, no lugar do ☰, e abre a gaveta; o símbolo da
+    gaveta fecha. Comportamento em public/javas/menu.js.
 
     Visual: public/css/painel.css (CSS simples, sem build).
     Comportamento: Alpine.js, que já vem no resources/js/app.js do Breeze.
@@ -30,21 +36,22 @@
 
     <title>@yield('titulo', 'Painel') — PointMed</title>
 
-    {{-- 24/09: o arquivo antigo (simbolo) nao existia. Nao ha PNG so com o
-         simbolo; usa a logo sem slogan, que e quadrada. --}}
-    <link rel="icon" href="{{ asset('imgs/marca/logosemslogan.png') }}" type="image/png">
+    {{-- 12/10/2026: simbolo-icone.png = só o símbolo, recortado do logo.png. --}}
+    <link rel="icon" href="{{ asset('imgs/marca/simbolo-icone.png') }}" type="image/png">
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=open-sans:400,600,700|rosario:600,700&display=swap" rel="stylesheet">
     {{-- Sem Vite/Node desde 24/09: reset em base.css e Alpine local. --}}
     <link rel="stylesheet" href="{{ asset('css/base.css') }}">
+    {{-- Sem "defer" e antes do Alpine: aplica o menu recolhido antes de desenhar (ver o arquivo). --}}
+    <script src="{{ asset('javas/menu.js') }}"></script>
     <script src="{{ asset('javas/alpine.min.js') }}" defer></script>
     <link rel="stylesheet" href="{{ asset('css/painel.css') }}">
 
     @stack('head')
 </head>
 
-<body class="fm-app" x-data="{ menu: false, perfil: false }" @keydown.escape.window="menu = false; perfil = false">
+<body class="fm-app" x-data="fmMenu()" @keydown.escape.window="menu = false; perfil = false">
 
     <x-sidebar />
 
@@ -54,15 +61,10 @@
     <div class="fm-principal">
 
         <header class="fm-topo">
-            <button type="button" class="fm-topo__menu" @click="menu = true" aria-label="Abrir menu">
-                <x-icone nome="menu" />
+            {{-- Celular: o símbolo no lugar do ☰ (12/10/2026). Some no computador. --}}
+            <button type="button" class="fm-topo__menu" @click="menu = true" :aria-expanded="menu" aria-label="Abrir menu">
+                <img src="{{ asset('imgs/marca/simbolo-icone.png') }}" alt="" width="36" height="36">
             </button>
-
-            <a href="{{ url('/') }}" class="fm-topo__logo" aria-label="PointMed, ir para o início">
-                {{-- 24/09: logo.png e a versao horizontal; o recorte da margem e feito
-                     no CSS (.fm-logo-recorte, no painel.css). --}}
-                <span class="fm-logo-recorte"><img src="{{ asset('imgs/marca/logo.png') }}" alt="PointMed"></span>
-            </a>
 
             <div class="fm-usuario" @click.outside="perfil = false">
                 <button
