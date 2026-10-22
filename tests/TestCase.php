@@ -30,6 +30,21 @@ abstract class TestCase extends BaseTestCase
         \Illuminate\Database\Eloquent\Model::preventSilentlyDiscardingAttributes(true);
     }
 
+    /**
+     * 12/10/2026: o middleware AuthenticateSession guarda na sessão um resumo
+     * da senha de quem entrou e desloga se ele não bater (é o que derruba as
+     * outras sessões quando a senha muda). Nos testes a sessão é a mesma do
+     * começo ao fim, e trocar de conta com actingAs() - sem login de verdade -
+     * parecia "senha mudou". Na vida real a troca de conta passa pelo logout,
+     * que apaga a sessão inteira.
+     */
+    public function actingAs(\Illuminate\Contracts\Auth\Authenticatable $user, $guard = null)
+    {
+        $this->app['session']->forget('password_hash_web');
+
+        return parent::actingAs($user, $guard);
+    }
+
     /** Loga com uma das contas do seed pelo e-mail (senha não importa aqui). */
     protected function comoUsuario(string $email): static
     {

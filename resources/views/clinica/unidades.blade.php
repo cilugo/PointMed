@@ -1,9 +1,14 @@
 {{--
     Clínica → Unidades. Dados: Clinica\UnidadeController@index (README §7.2).
 
-    Lista as unidades com o horário de FUNCIONAMENTO (não confundir com os
-    horários de atendimento de cada médico, que ficam dentro dele) e permite
-    editar esse horário e cadastrar unidade nova.
+    Lista as unidades com o horário de FUNCIONAMENTO e permite editar esse
+    horário, a faixa de preço, os dados (nome, tipo, endereço, telefone —
+    12/10/2026), desativar/reativar a unidade e cadastrar unidade nova.
+
+    Desativar (12/10/2026, decisão do grupo): a unidade some da busca e da
+    página pública, mas os médicos continuam ligados a ela e voltam ao
+    reativar. Os campos dos dados ficam em clinica/parciais/unidade-campos,
+    o mesmo do "Nova unidade".
 
     Várias unidades = vários formulários de horário na mesma tela. Para o
     old() e os erros voltarem só no formulário certo, cada um manda um campo
@@ -19,7 +24,6 @@
 
 @php
     use App\Support\Formatador;
-    use App\Support\Uf;
     $tipos = ['clinica' => 'Clínica', 'hospital' => 'Hospital', 'consultorio' => 'Consultório'];
     $formVolta = old('_form');
     $nomeDia = fn (string $dia) => Formatador::DIAS_CURTOS[array_search($dia, $dias, true)] ?? $dia;
@@ -43,8 +47,10 @@
                         'abre' => Formatador::hora($h->abre), 'fecha' => Formatador::hora($h->fecha),
                     ]])->all();
                     $esteForm = $formVolta === 'horarios-' . $local->id;
+                    $dadosVolta = $formVolta === 'dados-' . $local->id;
                 @endphp
-                <article class="fm-painel fm-local {{ $local->ativo ? '' : 'is-inativo' }}" x-data="{ editando: {{ $esteForm ? 'true' : 'false' }} }">
+                <article class="fm-painel fm-local {{ $local->ativo ? '' : 'is-inativo' }}"
+                         x-data="{ editando: {{ $esteForm ? 'true' : 'false' }}, editandoDados: {{ $dadosVolta ? 'true' : 'false' }} }">
                     <header class="fm-painel__topo">
                         <h2 class="fm-painel__titulo"><x-icone nome="building" /> {{ $local->nome }}</h2>
                         @if ($local->ativo)
@@ -58,6 +64,44 @@
                     @if ($local->telefone)
                         <p class="fm-local__endereco"><x-icone nome="phone" /> {{ Formatador::telefone($local->telefone) }}</p>
                     @endif
+                    @if ($local->site)
+                        <p class="fm-local__endereco"><x-icone nome="arrow-right" /> <a href="{{ $local->site }}" target="_blank" rel="noopener noreferrer">{{ $local->site_curto }}</a></p>
+                    @endif
+
+                    {{-- 13/10/2026: galeria da unidade (até Local::MAX_FOTOS). --}}
+                    @php $fotoVolta = $formVolta === 'foto-' . $local->id; @endphp
+                    <div class="fm-galeria">
+                        <p class="fm-galeria__titulo">Fotos <span>{{ $local->fotos->count() }} de {{ \App\Models\Local::MAX_FOTOS }}</span></p>
+                        @if ($local->fotos->isNotEmpty())
+                            <ul class="fm-galeria__lista">
+                                @foreach ($local->fotos as $i => $foto)
+                                    <li>
+                                        <img src="{{ $foto->url }}" alt="Foto {{ $i + 1 }} de {{ $local->nome }}" loading="lazy">
+                                        <form method="POST" action="{{ route('clinica.unidades.fotos.remover', [$local, $foto]) }}"
+                                              onsubmit="return confirm('Remover esta foto da galeria?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="fm-galeria__remover" aria-label="Remover a foto {{ $i + 1 }}" title="Remover"><x-icone nome="x" /></button>
+                                        </form>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @else
+                            <p class="fm-campo__ajuda">Sem fotos. A primeira aparece na página da unidade e na home.</p>
+                        @endif
+
+                        @if ($local->fotos->count() < \App\Models\Local::MAX_FOTOS)
+                            <form method="POST" action="{{ route('clinica.unidades.fotos.salvar', $local) }}" enctype="multipart/form-data" class="fm-galeria__enviar">
+                                @csrf
+                                <input type="hidden" name="_form" value="foto-{{ $local->id }}">
+                                <label for="foto-{{ $local->id }}" class="fm-sr">Foto da unidade</label>
+                                <input id="foto-{{ $local->id }}" type="file" name="foto" accept="image/jpeg,image/png,image/webp" required>
+                                <button type="submit" class="fm-pilula fm-pilula--pequena"><x-icone nome="plus" /> Enviar foto</button>
+                            </form>
+                            @if ($fotoVolta) @error('foto') <span class="fm-campo__erro">{{ $message }}</span> @enderror @endif
+                            <span class="fm-campo__ajuda">JPG, PNG ou WEBP de até 2 MB. Prefira foto da fachada ou da recepção, sem pessoas.</span>
+                        @endif
+                    </div>
 
                     {{-- 05/10/2026: a faixa de preço é escolhida aqui (a Tabela de preços saiu). --}}
                     <form method="POST" action="{{ route('clinica.unidades.faixa', $local) }}" class="fm-filtros" style="margin-top: 10px;">
@@ -92,10 +136,48 @@
                         @endforeach
                     </ul>
 
-                    <div class="fm-acoes-topo" style="margin-top: 12px;" x-show="!editando">
+                    @unless ($local->ativo)
+                        <p class="fm-campo__ajuda" style="margin-top: 8px;">
+                            Desativada: não aparece na busca nem tem página pública. Os médicos continuam ligados a ela.
+                        </p>
+                    @endunless
+
+                    <div class="fm-acoes-topo" style="margin-top: 12px; flex-wrap: wrap;" x-show="!editando && !editandoDados">
+                        <button type="button" class="fm-pilula fm-pilula--pequena" @click="editandoDados = true"><x-icone nome="pencil" /> Editar dados</button>
                         <button type="button" class="fm-pilula fm-pilula--pequena" @click="editando = true"><x-icone nome="pencil" /> Editar horário</button>
                         <a href="{{ route('clinica.medicos', ['unidade' => $local->id]) }}" class="fm-pilula fm-pilula--pequena">Médicos <x-icone nome="chevron-right" /></a>
+                        <form method="POST" action="{{ route('clinica.unidades.status', $local) }}" style="display: inline;"
+                              onsubmit="return confirm('{{ $local->ativo ? 'Desativar' : 'Reativar' }} a unidade {{ addslashes($local->nome) }}?')">
+                            @csrf
+                            @method('PATCH')
+                            <input type="hidden" name="ativo" value="{{ $local->ativo ? 0 : 1 }}">
+                            <button type="submit" class="fm-pilula fm-pilula--pequena">{{ $local->ativo ? 'Desativar unidade' : 'Reativar unidade' }}</button>
+                        </form>
                     </div>
+
+                    {{-- 12/10/2026: editar nome, tipo, endereço e telefone. --}}
+                    <form method="POST" action="{{ route('clinica.unidades.atualizar', $local) }}" class="fm-form fm-form--tres" x-show="editandoDados" x-cloak style="margin-top: 12px;">
+                        @csrf
+                        @method('PUT')
+                        <input type="hidden" name="_form" value="dados-{{ $local->id }}">
+                        @include('clinica.parciais.unidade-campos', [
+                            'prefixo' => 'd' . $local->id . '-',
+                            'valores' => [
+                                'nome' => $local->nome, 'tipo' => $local->tipo,
+                                'cep' => $local->cep ? \App\Support\Localizacao::formatarCep($local->cep) : '',
+                                'endereco' => $local->endereco, 'numero' => $local->numero,
+                                'complemento' => $local->complemento, 'bairro' => $local->bairro,
+                                'cidade' => $local->cidade, 'uf' => $local->uf,
+                                'telefone' => $local->telefone ? Formatador::telefone($local->telefone) : '',
+                                'site' => $local->site,
+                            ],
+                            'comOld' => $dadosVolta,
+                        ])
+                        <div class="fm-form__acoes">
+                            <button type="button" class="fm-botao fm-botao--suave fm-botao--pequeno" @click="editandoDados = false">Cancelar</button>
+                            <button type="submit" class="fm-botao fm-botao--pequeno">Salvar dados</button>
+                        </div>
+                    </form>
 
                     <form method="POST" action="{{ route('clinica.unidades.horarios', $local) }}" class="fm-form" x-show="editando" x-cloak style="margin-top: 12px;">
                         @csrf
@@ -124,64 +206,19 @@
         <form method="POST" action="{{ route('clinica.unidades.salvar') }}" class="fm-form fm-form--tres" x-show="aberto" x-cloak>
             @csrf
             <input type="hidden" name="_form" value="nova-unidade">
-            @php $e = fn (string $campo) => $novaVolta && $errors->has($campo); $v = fn (string $campo, $padrao = '') => $novaVolta ? old($campo, $padrao) : $padrao; @endphp
+            @include('clinica.parciais.unidade-campos', ['prefixo' => 'u-', 'valores' => [], 'comOld' => $novaVolta])
 
-            <div class="fm-campo {{ $e('nome') ? 'fm-campo--erro' : '' }}" style="grid-column: span 2;">
-                <label for="nome">Nome da unidade *</label>
-                <input id="nome" name="nome" maxlength="150" required value="{{ $v('nome') }}" placeholder="Ex.: Unidade Centro">
-                @if ($e('nome')) <span class="fm-campo__erro">{{ $errors->first('nome') }}</span> @endif
-            </div>
-
-            <div class="fm-campo {{ $e('tipo') ? 'fm-campo--erro' : '' }}">
-                <label for="tipo">Tipo *</label>
-                <select id="tipo" name="tipo" required>
-                    <option value="clinica" @selected($v('tipo', 'clinica') === 'clinica')>Clínica</option>
-                    <option value="hospital" @selected($v('tipo') === 'hospital')>Hospital</option>
-                </select>
-                @if ($e('tipo')) <span class="fm-campo__erro">{{ $errors->first('tipo') }}</span> @endif
-            </div>
-
-            <div class="fm-campo {{ $e('faixa_preco') ? 'fm-campo--erro' : '' }}">
+            @php $erroFaixa = $novaVolta && $errors->has('faixa_preco'); @endphp
+            <div class="fm-campo {{ $erroFaixa ? 'fm-campo--erro' : '' }}">
                 <label for="faixa_preco">Faixa de preço da consulta particular</label>
                 <select id="faixa_preco" name="faixa_preco">
                     <option value="">Não informar</option>
                     @foreach ([1, 2, 3, 4] as $n)
-                        <option value="{{ $n }}" @selected((int) $v('faixa_preco') === $n)>{{ str_repeat('$', $n) }} — {{ \App\Support\FaixaDePreco::descricao($n) }}</option>
+                        <option value="{{ $n }}" @selected($novaVolta && (int) old('faixa_preco') === $n)>{{ str_repeat('$', $n) }} — {{ \App\Support\FaixaDePreco::descricao($n) }}</option>
                     @endforeach
                 </select>
                 <span class="fm-campo__ajuda">O usuário vê só os $, nunca um valor exato.</span>
-                @if ($e('faixa_preco')) <span class="fm-campo__erro">{{ $errors->first('faixa_preco') }}</span> @endif
-            </div>
-
-            @foreach ([
-                ['cep', 'CEP *', 'inputmode="numeric" maxlength="9" required placeholder="12345-678"'],
-                ['endereco', 'Endereço *', 'maxlength="200" required'],
-                ['numero', 'Número *', 'maxlength="20" required'],
-                ['complemento', 'Complemento', 'maxlength="100"'],
-                ['bairro', 'Bairro *', 'maxlength="100" required'],
-                ['cidade', 'Cidade *', 'maxlength="100" required'],
-            ] as [$campo, $rotulo, $attrs])
-                <div class="fm-campo {{ $e($campo) ? 'fm-campo--erro' : '' }}">
-                    <label for="u-{{ $campo }}">{{ $rotulo }}</label>
-                    <input id="u-{{ $campo }}" name="{{ $campo }}" value="{{ $v($campo) }}" {!! $attrs !!}>
-                    @if ($e($campo)) <span class="fm-campo__erro">{{ $errors->first($campo) }}</span> @endif
-                </div>
-            @endforeach
-
-            <div class="fm-campo {{ $e('uf') ? 'fm-campo--erro' : '' }}">
-                <label for="u-uf">UF *</label>
-                <select id="u-uf" name="uf" required>
-                    @foreach (Uf::TODAS as $uf)
-                        <option value="{{ $uf }}" @selected($v('uf', 'SP') === $uf)>{{ $uf }}</option>
-                    @endforeach
-                </select>
-                @if ($e('uf')) <span class="fm-campo__erro">{{ $errors->first('uf') }}</span> @endif
-            </div>
-
-            <div class="fm-campo {{ $e('telefone') ? 'fm-campo--erro' : '' }}">
-                <label for="u-telefone">Telefone</label>
-                <input id="u-telefone" name="telefone" type="tel" inputmode="numeric" maxlength="15" value="{{ $v('telefone') }}">
-                @if ($e('telefone')) <span class="fm-campo__erro">{{ $errors->first('telefone') }}</span> @endif
+                @if ($erroFaixa) <span class="fm-campo__erro">{{ $errors->first('faixa_preco') }}</span> @endif
             </div>
 
             <fieldset class="fm-campo--largo fm-funcionamento">

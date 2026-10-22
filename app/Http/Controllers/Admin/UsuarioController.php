@@ -6,17 +6,83 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 
+/**
+ * Admin → contas de acesso.
+ *
+ * 13/10/2026 (decisão do Sidney de 01/10): três telas separadas, no mesmo
+ * visual, em vez de um filtro de situação numa tela só:
+ *   - Contas ativas     /admin/usuarios             (admin.usuarios)         → Bloquear
+ *   - Contas bloqueadas /admin/usuarios/bloqueadas  (admin.contas-bloqueadas) → Desbloquear
+ *   - Contas excluídas  /admin/usuarios/excluidas   (admin.contas-excluidas)  → só leitura
+ *
+ * Os nomes das rotas novas NÃO começam com "admin.usuarios" de propósito: o
+ * menu marca o item ativo com routeIs('admin.usuarios*'), e "Contas ativas"
+ * ficaria aceso nas outras duas telas.
+ *
+ * "Excluída" = status `inativo`. Hoje o único jeito de uma conta ficar inativa
+ * é o próprio usuário excluí-la (Usuario::excluirConta, que também preenche
+ * excluida_em); olhar o status garante que nenhuma conta fique fora das três telas.
+ */
 class UsuarioController extends Controller
 {
+    /** situação => [status no banco, rota, título, subtítulo] */
+    public const SITUACOES = [
+        'ativas' => ['ativo', 'admin.usuarios', 'Contas ativas',
+            'Quem pode entrar na plataforma. Bloqueie quem não deve mais acessar.'],
+        'bloqueadas' => ['bloqueado', 'admin.contas-bloqueadas', 'Contas bloqueadas',
+            'Contas que não entram mais. O motivo é interno: a pessoa só vê que a conta está bloqueada.'],
+        'excluidas' => ['inativo', 'admin.contas-excluidas', 'Contas excluídas',
+            'Contas que o próprio usuário excluiu (LGPD). Os dados pessoais já foram apagados e a conta não volta.'],
+    ];
+
     public function index(Request $request)
     {
+        // Link antigo (?status=bloqueado, ?status=inativo) vai para a tela certa.
+        $porStatus = ['bloqueado' => 'admin.contas-bloqueadas', 'inativo' => 'admin.contas-excluidas'];
+        if (isset($porStatus[$request->query('status')])) {
+            return redirect()->route($porStatus[$request->query('status')], $request->only('tipo', 'busca'));
+        }
+
+        return $this->listar($request, 'ativas');
+    }
+
+    public function bloqueadas(Request $request)
+    {
+        return $this->listar($request, 'bloqueadas');
+    }
+
+    public function excluidas(Request $request)
+    {
+        return $this->listar($request, 'excluidas');
+    }
+
+    private function listar(Request $request, string $situacao)
+    {
+        [$status, $rota, $titulo, $subtitulo] = self::SITUACOES[$situacao];
+
+        // Filtro em lista na URL (?tipo[]=x) não derruba a página: só texto conta.
+        $tipo = is_string($request->tipo) ? $request->tipo : null;
+        $busca = is_string($request->busca) ? trim($request->busca) : null;
+
+        $contagem = User::query()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
         return view('admin.usuarios', [
-            'usuarios' => User::query()
-                ->when($request->tipo, fn ($q, $t) => $q->where('tipo', $t))
-                ->when($request->status, fn ($q, $s) => $q->where('status', $s))
-                ->when($request->busca, fn ($q, $b) => $q->where(fn ($s) => $s
+            'situacao'  => $situacao,
+            'rota'      => $rota,
+            'titulo'    => $titulo,
+            'subtitulo' => $subtitulo,
+            'contagem'  => collect(self::SITUACOES)->map(fn ($s) => (int) ($contagem[$s[0]] ?? 0)),
+            'usuarios'  => User::query()
+                ->where('status', $status)
+                ->when($tipo, fn ($q, $t) => $q->where('tipo', $t))
+                ->when($busca, fn ($q, $b) => $q->where(fn ($s) => $s
                     ->where('name', 'like', "%{$b}%")
                     ->orWhere('email', 'like', "%{$b}%")))
+                ->when($situacao === 'bloqueadas', fn ($q) => $q->orderByDesc('bloqueado_em'))
+                ->when($situacao === 'excluidas', fn ($q) => $q->orderByDesc('excluida_em'))
                 ->latest()
                 ->paginate(25)
                 ->withQueryString(),
@@ -56,7 +122,8 @@ class UsuarioController extends Controller
         ])->save();
 
         // O motivo do bloqueio NÃO vai para a pessoa (AGENTS.md §3: sem detalhar).
-        return back()->with('sucesso', 'Conta bloqueada.');
+        // A conta sai da tela de ativas: a mensagem diz onde ela foi parar.
+        return back()->with('sucesso', "A conta de {$user->name} foi bloqueada e agora está em Contas bloqueadas.");
     }
 
     public function desbloquear(User $user)
@@ -70,6 +137,6 @@ class UsuarioController extends Controller
             'bloqueado_em'    => null,
         ])->save();
 
-        return back()->with('sucesso', 'Conta reativada.');
+        return back()->with('sucesso', "A conta de {$user->name} foi reativada e voltou para Contas ativas.");
     }
 }

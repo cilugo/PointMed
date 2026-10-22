@@ -35,16 +35,108 @@ final class FotoDePerfil
     public static function salvar(UploadedFile $arquivo, ?string $anterior = null): string
     {
         $mime = $arquivo->getMimeType();
+        $mime = in_array($mime, Foto::TIPOS, true) ? $mime : 'image/jpeg';
+
+        [$conteudo, $mime] = self::regravar((string) $arquivo->getRealPath(), $mime);
 
         $foto = Foto::create([
             'chave'    => Str::random(40),
-            'mime'     => in_array($mime, Foto::TIPOS, true) ? $mime : 'image/jpeg',
-            'conteudo' => base64_encode((string) file_get_contents($arquivo->getRealPath())),
+            'mime'     => $mime,
+            'conteudo' => base64_encode($conteudo),
         ]);
 
         self::apagar($anterior);
 
         return self::PREFIXO . $foto->chave;
+    }
+
+    /** Lado maior da foto guardada, em pixels (foto de perfil não precisa de mais). */
+    public const LADO_MAXIMO = 1024;
+
+    /**
+     * Regrava a imagem antes de guardar (12/10/2026, revisão de segurança).
+     *
+     * Foto de celular leva junto "metadados" (EXIF): modelo do aparelho, data e,
+     * muitas vezes, a LOCALIZAÇÃO (GPS) de onde foi tirada. As fotos de clínica
+     * e de médico são públicas. Redesenhar a imagem com o GD do PHP grava só os
+     * pixels: os metadados ficam para trás. De quebra, a foto fica no máximo
+     * com 1024 px (menos peso no banco) e um arquivo "disfarçado" de imagem não
+     * passa adiante como veio.
+     *
+     * O celular costuma guardar a foto deitada e anotar no EXIF "gire 90°".
+     * Como o EXIF sai, a rotação é aplicada antes (girarPeloExif).
+     *
+     * Sem a extensão GD (XAMPP com extension=gd desligada), guarda como veio.
+     *
+     * @return array{0: string, 1: string} [conteúdo, tipo]
+     */
+    private static function regravar(string $caminho, string $mime): array
+    {
+        $conteudo = (string) file_get_contents($caminho);
+
+        if (! function_exists('imagecreatefromstring')) {
+            return [$conteudo, $mime];
+        }
+
+        $imagem = @imagecreatefromstring($conteudo);
+        if ($imagem === false) {
+            return [$conteudo, $mime];
+        }
+
+        $imagem = self::girarPeloExif($imagem, $caminho, $mime);
+
+        $largura = imagesx($imagem);
+        $altura = imagesy($imagem);
+        if (max($largura, $altura) > self::LADO_MAXIMO) {
+            $proporcao = self::LADO_MAXIMO / max($largura, $altura);
+            $menor = imagescale($imagem, max(1, (int) round($largura * $proporcao)), max(1, (int) round($altura * $proporcao)));
+            if ($menor !== false) {
+                $imagem = $menor;
+            }
+        }
+
+        if ($mime === 'image/webp' && ! function_exists('imagewebp')) {
+            $mime = 'image/jpeg';
+        }
+
+        ob_start();
+        $ok = match ($mime) {
+            'image/png'  => (function () use ($imagem) {
+                imagealphablending($imagem, false);
+                imagesavealpha($imagem, true);
+
+                return imagepng($imagem, null, 6);
+            })(),
+            'image/webp' => imagewebp($imagem, null, 85),
+            default      => imagejpeg($imagem, null, 85),
+        };
+        $nova = (string) ob_get_clean();
+
+        return $ok && $nova !== '' ? [$nova, $mime] : [$conteudo, $mime];
+    }
+
+    /** Aplica a rotação que o celular anotou no EXIF (só JPEG; precisa da extensão exif). */
+    private static function girarPeloExif(\GdImage $imagem, string $caminho, string $mime): \GdImage
+    {
+        if ($mime !== 'image/jpeg' || ! function_exists('exif_read_data')) {
+            return $imagem;
+        }
+
+        $exif = @exif_read_data($caminho);
+        $angulo = match ((int) ($exif['Orientation'] ?? 1)) {
+            3 => 180,
+            6 => -90,   // imagerotate gira no sentido anti-horário
+            8 => 90,
+            default => 0,
+        };
+
+        if ($angulo === 0) {
+            return $imagem;
+        }
+
+        $girada = imagerotate($imagem, $angulo, 0);
+
+        return $girada !== false ? $girada : $imagem;
     }
 
     /**

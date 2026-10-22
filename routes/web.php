@@ -63,10 +63,13 @@ Route::middleware('guest')->group(function () {
     Route::get('/cadastro', [CadastroController::class, 'escolher'])->name('cadastro.escolher');
 
     Route::get('/cadastro/usuario', [CadastroController::class, 'formUsuario'])->name('cadastro.usuario');
-    Route::post('/cadastro/usuario', [CadastroController::class, 'salvarUsuario']);
+    // 12/10/2026: no máximo 10 cadastros por minuto do mesmo endereço (IP).
+    // Sem limite, um robô criava contas à vontade e testava em massa quais
+    // CPFs já têm conta (a tela avisa "Já existe um cadastro com esse CPF").
+    Route::post('/cadastro/usuario', [CadastroController::class, 'salvarUsuario'])->middleware('throttle:10,1');
 
     Route::get('/cadastro/clinica', [CadastroController::class, 'formClinica'])->name('cadastro.clinica');
-    Route::post('/cadastro/clinica', [CadastroController::class, 'salvarClinica']);
+    Route::post('/cadastro/clinica', [CadastroController::class, 'salvarClinica'])->middleware('throttle:10,1');
 });
 
 // Endereço antigo do cadastro de médico (link salvo, protótipo): volta para a escolha.
@@ -83,7 +86,8 @@ Route::get('/foto/{chave}', [FotoController::class, 'mostrar'])
     ->where('chave', '[A-Za-z0-9]{40}')->name('foto.mostrar');
 
 Route::middleware('auth')->group(function () {
-    Route::post('/minha-foto', [FotoController::class, 'atualizar'])->name('foto.atualizar');
+    // 12/10: cada foto é gravada no banco; sem limite, dava para encher o banco.
+    Route::post('/minha-foto', [FotoController::class, 'atualizar'])->middleware('throttle:10,1')->name('foto.atualizar');
     Route::delete('/minha-foto', [FotoController::class, 'remover'])->name('foto.remover');
 });
 
@@ -91,7 +95,8 @@ Route::middleware('auth')->group(function () {
 // Área do usuário
 // ---------------------------------------------------------------------
 
-Route::middleware(['auth', 'tipo:usuario'])->group(function () {
+// 12/10: até 20 avaliações por minuto por usuário (cada uma recalcula médias).
+Route::middleware(['auth', 'tipo:usuario', 'throttle:20,1'])->group(function () {
 
     // 01/10: avaliação direto no local ou no médico (sem consulta).
     // Uma por usuário em cada um; avaliar de novo edita (UNIQUE no banco).
@@ -122,7 +127,7 @@ Route::middleware(['auth', 'tipo:usuario'])->prefix('usuario')->name('usuario.')
 
     // 30/09: exclusão de conta (LGPD). Anonimiza, não apaga — ver
     // Usuario::excluirConta(). Pede a senha atual e uma confirmação.
-    Route::delete('/perfil', [Usuario\PerfilController::class, 'excluir'])->name('perfil.excluir');
+    Route::delete('/perfil', [Usuario\PerfilController::class, 'excluir'])->middleware('throttle:6,1')->name('perfil.excluir');   // 12/10: pede a senha atual
 });
 
 // ---------------------------------------------------------------------
@@ -138,7 +143,10 @@ Route::middleware(['auth', 'tipo:clinica'])->prefix('clinica')->name('clinica.')
     // unidade DESTA clínica.
     Route::get('/medicos', [Clinica\MedicoController::class, 'index'])->name('medicos');
     Route::get('/medicos/novo', [Clinica\MedicoController::class, 'form'])->name('medicos.novo');
-    Route::post('/medicos', [Clinica\MedicoController::class, 'salvar'])->name('medicos.salvar');
+    // 12/10: até 10 envios por minuto por clínica. Vincular médico que já
+    // existe pede o CPF dele; sem limite, dava para ficar chutando CPFs.
+    Route::post('/medicos', [Clinica\MedicoController::class, 'salvar'])
+        ->middleware('throttle:10,1')->name('medicos.salvar');
     Route::get('/medicos/{medico}/editar', [Clinica\MedicoController::class, 'editar'])
         ->whereNumber('medico')->name('medicos.editar');
     Route::put('/medicos/{medico}', [Clinica\MedicoController::class, 'atualizar'])
@@ -148,17 +156,35 @@ Route::middleware(['auth', 'tipo:clinica'])->prefix('clinica')->name('clinica.')
 
     // 01/10: a clínica também cria especialidade nova (antes só o admin).
     Route::get('/especialidades', [Clinica\EspecialidadeController::class, 'index'])->name('especialidades');
-    Route::post('/especialidades', [Clinica\EspecialidadeController::class, 'salvar'])->name('especialidades.salvar');
+    // 12/10: a especialidade criada vale para a plataforma inteira; limite contra lixo em massa.
+    Route::post('/especialidades', [Clinica\EspecialidadeController::class, 'salvar'])
+        ->middleware('throttle:10,1')->name('especialidades.salvar');
 
     Route::get('/unidades', [Clinica\UnidadeController::class, 'index'])->name('unidades');
     Route::post('/unidades', [Clinica\UnidadeController::class, 'salvar'])->name('unidades.salvar');
     Route::put('/unidades/{local}/horarios', [Clinica\UnidadeController::class, 'salvarHorarios'])
         ->name('unidades.horarios');
 
+    // 12/10: editar os dados da unidade (nome, tipo, endereço, telefone) e
+    // desativar/reativar. Desativada, some da busca e da página pública, mas
+    // os médicos continuam ligados a ela e voltam ao reativar.
+    Route::put('/unidades/{local}', [Clinica\UnidadeController::class, 'atualizar'])
+        ->whereNumber('local')->name('unidades.atualizar');
+    Route::patch('/unidades/{local}/status', [Clinica\UnidadeController::class, 'alterarStatus'])
+        ->whereNumber('local')->name('unidades.status');
+
     // 05/10: a "Tabela de preços" saiu. A clínica escolhe a faixa ($ a $$$$)
     // de cada unidade (App\Support\FaixaDePreco).
     Route::put('/unidades/{local}/faixa', [Clinica\UnidadeController::class, 'salvarFaixa'])
         ->whereNumber('local')->name('unidades.faixa');
+    // 13/10/2026: galeria da unidade (até 6 fotos). scopeBindings: a foto
+    // precisa ser DESTA unidade; o limite de envios é o mesmo da foto de perfil.
+    Route::scopeBindings()->group(function () {
+        Route::post('/unidades/{local}/fotos', [Clinica\FotoDaUnidadeController::class, 'salvar'])
+            ->whereNumber('local')->middleware('throttle:10,1')->name('unidades.fotos.salvar');
+        Route::delete('/unidades/{local}/fotos/{foto}', [Clinica\FotoDaUnidadeController::class, 'remover'])
+            ->whereNumber(['local', 'foto'])->name('unidades.fotos.remover');
+    });
 
     // Cobertura de convênios da clínica. O convênio é aceito pelo MÉDICO;
     // aqui a clínica só liga/desliga "aceita convênio" por médico e unidade.
@@ -180,6 +206,9 @@ Route::middleware(['auth', 'tipo:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/', [Admin\DashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/usuarios', [Admin\UsuarioController::class, 'index'])->name('usuarios');
+    // 13/10/2026: bloqueadas e excluídas em telas próprias (ver o UsuarioController).
+    Route::get('/usuarios/bloqueadas', [Admin\UsuarioController::class, 'bloqueadas'])->name('contas-bloqueadas');
+    Route::get('/usuarios/excluidas', [Admin\UsuarioController::class, 'excluidas'])->name('contas-excluidas');
     // Bloqueio exige motivo — bloqueio sem registro de quem e por quê
     // é ingovernável.
     Route::post('/usuarios/{user}/bloquear', [Admin\UsuarioController::class, 'bloquear'])

@@ -38,6 +38,11 @@ services:
         sync: false
       - key: ADMIN_PASSWORD   # senha inicial (mín. 8); depois, troque pelo site
         sync: false
+      # 12/10/2026 — senha das contas de demonstração (admin@facilmed.test, clínicas e
+      # usuários do seed) NO SITE. A do README ("facilmed2026") é pública e não vale
+      # aqui. Sem esta variável, essas contas ficam com uma senha aleatória.
+      - key: DEMO_PASSWORD
+        sync: false
 
       # --- Fixas ---
       - key: APP_NAME

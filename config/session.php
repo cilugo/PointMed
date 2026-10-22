@@ -169,7 +169,10 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    // 12/10/2026: no site no ar (https) o cookie da sessão só viaja por
+    // conexão segura. No XAMPP (http://localhost) continua desligado, senão
+    // ninguém conseguiria entrar.
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
 
     /*
     |--------------------------------------------------------------------------

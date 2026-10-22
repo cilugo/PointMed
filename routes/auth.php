@@ -26,14 +26,16 @@ Route::middleware('guest')->group(function () {
     Route::get('forgot-password', [PasswordResetLinkController::class, 'create'])
         ->name('password.request');
 
+    // 12/10/2026: o Laravel já limita 1 pedido por minuto POR E-MAIL; isto limita
+    // também por endereço (IP), para ninguém disparar e-mail para a lista toda.
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
-        ->name('password.email');
+        ->middleware('throttle:6,1')->name('password.email');
 
     Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
         ->name('password.reset');
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
-        ->name('password.store');
+        ->middleware('throttle:6,1')->name('password.store');
 });
 
 Route::middleware('auth')->group(function () {
@@ -53,7 +55,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('confirm-password', [ConfirmablePasswordController::class, 'store']);
 
-    Route::put('password', [PasswordController::class, 'update'])->name('password.update');
+    // 12/10: limita o chute da senha atual por quem achou o computador aberto.
+    Route::put('password', [PasswordController::class, 'update'])->middleware('throttle:6,1')->name('password.update');
 
     Route::post('logout', [AuthenticatedSessionController::class, 'destroy'])
         ->name('logout');

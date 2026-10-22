@@ -25,7 +25,7 @@ class UsuarioSeeder extends Seeder
                 ['email' => $d['email']],
                 [
                     'name'     => $d['nome'],
-                    'password' => DadosFicticios::SENHA,
+                    'password' => DadosFicticios::senha(),   // 12/10: no site no ar, a DEMO_PASSWORD
                     'tipo'     => User::TIPO_USUARIO,
                     'telefone' => $d['telefone'],
                     'status'   => 'ativo',
@@ -58,6 +58,6 @@ class UsuarioSeeder extends Seeder
             );
         }
 
-        $this->command->info(count(DadosFicticios::USUARIOS) . ' usuários fictícios. Senha: ' . DadosFicticios::SENHA);
+        $this->command->info(count(DadosFicticios::USUARIOS) . ' usuários fictícios. Senha: ' . DadosFicticios::textoDaSenha());
     }
 }

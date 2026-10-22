@@ -127,9 +127,12 @@
     <footer class="footer">
         <div class="container site-rodape">
             <img src="{{ asset('imgs/marca/simbolo.png') }}" alt="" class="site-rodape__logo">
+            {{-- 13/10/2026 (pendência de 05/10, notas do Lucas): sai o "Médicos, clínicas e
+                 convênios são fictícios" do rodapé. Fica o que o AGENTS §3 exige em toda tela
+                 pública: que é um projeto acadêmico e que não há contrato com operadora. --}}
             <p class="footer-copy">
                 {{ now()->year }} PointMed · Projeto acadêmico (TCC) — Etec Profª Ilza Nascimento Pintus.
-                Médicos, clínicas e convênios são fictícios.
+                Sem contrato com nenhuma operadora de saúde.
             </p>
         </div>
     </footer>

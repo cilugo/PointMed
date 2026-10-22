@@ -212,6 +212,10 @@
     .fm-form--duas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .fm-form--tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .fm-campo--largo { grid-column: 1 / -1; }
+    /* 12/10/2026: campo de 2 colunas só a partir daqui. Antes era style="grid-column: span 2"
+       na tela, e no celular (1 coluna) isso criava uma 2ª coluna e espremia o formulário. */
+    .fm-campo--duplo { grid-column: span 2; }
+    .fm-form--tres > .fm-form__acoes { grid-column: 1 / -1; }
     .fm-cobertura { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
@@ -498,3 +502,23 @@
 @media (max-width: 560px) {
     .fm-conta__extra { margin-left: 0; }
 }
+
+/* ==========================================================================
+   Galeria da unidade (Clínica → Unidades, 13/10/2026)
+   ========================================================================== */
+.fm-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.fm-galeria { margin-top: 14px; padding: 12px; border: 1px solid var(--fm-borda); border-radius: 14px; display: grid; gap: 8px; }
+.fm-galeria__titulo { font-size: 13.5px; font-weight: 700; color: var(--fm-titulo); display: flex; justify-content: space-between; }
+.fm-galeria__titulo span { font-weight: 600; color: var(--fm-suave); }
+.fm-galeria__lista { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.fm-galeria__lista li { position: relative; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden; background: #eef5ff; }
+.fm-galeria__lista img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fm-galeria__remover {
+    position: absolute; top: 4px; right: 4px;
+    width: 26px; height: 26px; display: grid; place-items: center;
+    border: 0; border-radius: 999px; background: rgba(15, 23, 42, .65); color: #fff; cursor: pointer;
+}
+.fm-galeria__remover:hover { background: #b42318; }
+.fm-galeria__remover .fm-icone { width: 14px; height: 14px; }
+.fm-galeria__enviar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fm-galeria__enviar input[type="file"] { flex: 1 1 180px; min-width: 0; font-size: 13px; }

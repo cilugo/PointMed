@@ -9,11 +9,26 @@
 FROM php:8.3-apache
 
 # Extensões do PHP que o Laravel/FacilMed usam + ferramentas do Composer.
+# 12/10/2026: gd (com jpeg e webp) e exif - a foto de perfil é regravada para
+# tirar os metadados do celular, como o GPS (App\Support\FotoDePerfil).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git unzip libzip-dev libicu-dev \
-    && docker-php-ext-install pdo_mysql zip intl bcmath \
+       libpng-dev libjpeg62-turbo-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install pdo_mysql zip intl bcmath gd exif \
     && a2enmod rewrite headers \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 12/10/2026: o log de acesso do Apache NÃO guarda a parte depois do "?" nem a
+# página de onde a pessoa veio (Referer). A busca leva CEP e lat/lng na URL, e o
+# AGENTS.md §3 proíbe guardar a localização do usuário em log. Fica: método,
+# caminho, resposta e navegador.
+RUN printf '%s\n' \
+      '# PointMed: sem query string nem Referer no log (localizacao do usuario).' \
+      'LogFormat "%h %l %u %t \"%m %U %H\" %>s %O \"%{User-Agent}i\"" combined' \
+      'LogFormat "%v:%p %h %l %u %t \"%m %U %H\" %>s %O \"%{User-Agent}i\"" vhost_combined' \
+      > /etc/apache2/conf-available/pointmed-log.conf \
+    && a2enconf pointmed-log
 
 # O Apache passa a servir a pasta public/ (o index.php de lá é o do Laravel).
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public

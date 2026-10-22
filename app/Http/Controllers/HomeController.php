@@ -87,9 +87,11 @@ class HomeController extends Controller
             ->orderByDesc('total_avaliacoes')
             ->orderBy('nome')
             ->limit(8)
+            ->with('fotos')
             ->get()
-            ->each(fn (Local $l) => $l->imagem_vitrine = isset(self::IMAGENS_DA_VITRINE[$l->nome])
-                ? asset(self::IMAGENS_DA_VITRINE[$l->nome])
-                : null);
+            // 13/10/2026: a 1ª foto da galeria da unidade; sem galeria, a imagem
+            // fixa pelo nome (as unidades de demonstração já têm as duas iguais).
+            ->each(fn (Local $l) => $l->imagem_vitrine = $l->fotos->first()?->url
+                ?? (isset(self::IMAGENS_DA_VITRINE[$l->nome]) ? asset(self::IMAGENS_DA_VITRINE[$l->nome]) : null));
     }
 }

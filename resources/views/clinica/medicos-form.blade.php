@@ -2,8 +2,10 @@
     Clínica → Cadastrar médico. Dados: Clinica\MedicoController@form (README §7.2).
 
     Dois casos, decididos pelo back-end (CadastrarMedicoPelaClinicaRequest):
-      - CRM/UF já existe no PointMed → só cria o vínculo (nome, CPF e
-        especialidades são ignorados);
+      - CRM/UF já existe no PointMed → só cria o vínculo, e SÓ se o CPF
+        digitado for o do médico (12/10/2026: o CRM é público, o CPF não -
+        sem isso qualquer clínica "pegava" o perfil de um médico de outra);
+        nome e especialidades são ignorados;
       - CRM novo → conferido na base simulada; os dados passam a ser obrigatórios.
     01/10/2026: o médico é só um PERFIL (sem e-mail de login nem senha).
     Foto, bio, anos de carreira e convênios: em "Editar perfil", depois.
@@ -47,7 +49,7 @@
             {{-- ============ 1. CRM e unidade ============ --}}
             <section class="fm-painel" style="margin-top: 18px;">
                 <header class="fm-painel__topo">
-                    <h2 class="fm-painel__titulo"><x-icone nome="badge" /> CRM e unidade</h2>
+                    <h2 class="fm-painel__titulo"><x-icone nome="badge" /> CRM, CPF e unidade</h2>
                 </header>
 
                 <div class="fm-form fm-form--tres">
@@ -65,6 +67,12 @@
                             @endforeach
                         </select>
                         @error('uf') <span class="fm-campo__erro">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="fm-campo {{ $errors->has('cpf') ? 'fm-campo--erro' : '' }}">
+                        <label for="cpf">CPF do médico *</label>
+                        <input id="cpf" name="cpf" inputmode="numeric" maxlength="14" required value="{{ old('cpf') }}" placeholder="000.000.000-00">
+                        @error('cpf') <span class="fm-campo__erro">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="fm-campo {{ $errors->has('local_id') ? 'fm-campo--erro' : '' }}">
@@ -94,7 +102,8 @@
                     <x-icone nome="lightbulb" />
                     <span>O CRM é <strong>conferido na hora na base simulada do PointMed</strong> (projeto acadêmico: não consulta o
                         CFM de verdade), junto com o <strong>nome completo</strong> do médico. Se o médico <strong>já está</strong>
-                        no PointMed com esse CRM (atende em outra clínica), ele só é vinculado à unidade — os dados abaixo são ignorados.</span>
+                        no PointMed com esse CRM (atende em outra clínica), ele só é vinculado à unidade se o <strong>CPF</strong> for o dele
+                        — os dados abaixo são ignorados. O CPF não aparece em nenhuma tela pública.</span>
                 </p>
             </section>
 
@@ -109,12 +118,6 @@
                         <label for="name">Nome completo</label>
                         <input id="name" name="name" maxlength="255" value="{{ old('name') }}" placeholder="Ex.: Dra. Fulana de Tal">
                         @error('name') <span class="fm-campo__erro">{{ $message }}</span> @enderror
-                    </div>
-
-                    <div class="fm-campo {{ $errors->has('cpf') ? 'fm-campo--erro' : '' }}">
-                        <label for="cpf">CPF</label>
-                        <input id="cpf" name="cpf" inputmode="numeric" maxlength="14" value="{{ old('cpf') }}" placeholder="000.000.000-00">
-                        @error('cpf') <span class="fm-campo__erro">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="fm-campo fm-campo--largo">

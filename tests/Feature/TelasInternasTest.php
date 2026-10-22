@@ -77,7 +77,7 @@ class TelasInternasTest extends TestCase
         }
     }
 
-    public function test_comentario_da_avaliacao_so_para_o_autor_a_clinica_e_o_admin(): void
+    public function test_clinica_e_admin_recebem_o_comentario_nos_paineis(): void
     {
         $temComentario = fn ($p) => $p->first() === null || array_key_exists('comentario', $p->first()->toArray());
 

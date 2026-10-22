@@ -89,7 +89,7 @@ class PerfilPublicoController extends Controller
         $cep = is_string($c = $request->query('cep_origem')) ? $c : null;   // 07/10: veio de uma busca por CEP
         $origem = Localizacao::origem($request->query('lat'), $request->query('lng'), $cidade, $cep);
 
-        $local->load(['horarios', 'clinica.user']);
+        $local->load(['horarios', 'clinica.user', 'fotos']);   // 13/10: + galeria
 
         // Mesma regra da busca: só vínculo público de médico com alguma
         // especialidade ativa.

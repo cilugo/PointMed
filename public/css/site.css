@@ -331,3 +331,18 @@ a.clinica-card:hover .nome-clinica { text-decoration: underline; }
 .avaliacoes-publicas__estrelas { color: #f2b01e; letter-spacing: 1px; }
 .avaliacoes-publicas__estrelas span { color: #d5dde8; }
 .avaliacoes-publicas__lista p { margin: 6px 0 0; color: #333; }
+
+/* ==========================================================================
+   Página do local: galeria e botões (13/10/2026)
+   ========================================================================== */
+.galeria { display: grid; gap: 8px; padding: 10px; }
+.galeria__principal { position: relative; aspect-ratio: 16 / 8; border-radius: 12px; overflow: hidden; background: #eaf4fc; }
+.galeria__principal img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.galeria__contador { position: absolute; right: 12px; bottom: 12px; padding: 3px 10px; border-radius: 999px; background: rgba(0, 0, 0, .55); color: #fff; font-size: 12px; font-weight: 700; }
+.galeria__miniaturas { display: flex; gap: 8px; overflow-x: auto; }
+.galeria__miniaturas button { flex: none; width: 92px; height: 64px; padding: 0; border: 2px solid transparent; border-radius: 10px; overflow: hidden; cursor: pointer; background: none; }
+.galeria__miniaturas button.is-ativa { border-color: var(--site-azul); }
+.galeria__miniaturas img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (max-width: 600px) { .galeria__principal { aspect-ratio: 4 / 3; } }
+
+.local-botoes { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }

@@ -10,6 +10,7 @@ use App\Models\Vinculo;
 use App\Support\Geocodificador;
 use App\Support\Localizacao;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 
 class BuscaController extends Controller
 {
@@ -116,7 +117,20 @@ class BuscaController extends Controller
         $cepDigitado = preg_replace('/\D/', '', (string) $this->texto($request, 'cep'));
         $aviso = null;
 
-        if ($cepDigitado !== '') {
+        // 12/10/2026: CEP que ainda não está no cache sai para a internet; cada
+        // endereço (IP) pode fazer 20 dessas consultas por minuto. Passou disso,
+        // a tela pede para esperar, em vez de travar o servidor.
+        $limiteDoCep = 'consulta-cep:' . $request->ip();
+        $esperar = $cepDigitado !== '' && strlen($cepDigitado) === 8
+            && ! Geocodificador::cepEmCache($cepDigitado) && RateLimiter::tooManyAttempts($limiteDoCep, 20);
+
+        if ($esperar) {
+            $aviso = 'Muitas buscas por CEP em pouco tempo. Espere um minuto, use a sua localização ou escolha a cidade.';
+        } elseif ($cepDigitado !== '') {
+            if (strlen($cepDigitado) === 8 && ! Geocodificador::cepEmCache($cepDigitado)) {
+                RateLimiter::hit($limiteDoCep, 60);
+            }
+
             $achou = strlen($cepDigitado) === 8 ? Geocodificador::doCep($cepDigitado) : null;
 
             if ($achou) {
