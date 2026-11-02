@@ -13,7 +13,7 @@
 services:
   - type: web
     runtime: docker
-    name: facilmed
+    name: pointmed
     plan: free
     region: virginia
     branch: main
