@@ -12,6 +12,19 @@ sed -ri "s/<VirtualHost \*:[0-9]+>/<VirtualHost *:${PORT}>/" /etc/apache2/sites-
 # (ex.: https://facilmed.onrender.com). Vai nos links dos e-mails.
 export APP_URL="${APP_URL:-$RENDER_EXTERNAL_URL}"
 
+# 1b. (02/11/2026) APP_KEY. O Laravel quer "base64:" + 32 bytes. Na conta do projeto a
+#     APP_KEY é um "Generated secret" do Render (Environment → Add variable → Generated secret):
+#     ninguém precisa gerar nem colar a chave. Esse valor vem sem o "base64:", então aqui ele vira
+#     uma chave válida (SHA-256 do valor = 32 bytes, sempre a mesma para o mesmo valor). Uma APP_KEY
+#     que já começa com "base64:" (a da máquina de cada um, ou gerada com key:generate) fica igual.
+case "${APP_KEY:-}" in
+    ""|base64:*) ;;
+    *)
+        APP_KEY="base64:$(php -r 'echo base64_encode(hash("sha256", getenv("APP_KEY"), true));')"
+        export APP_KEY
+        ;;
+esac
+
 # 2. Certificado do banco (Aiven exige conexão segura). O texto do
 #    certificado vem da variável MYSQL_CA_CERT e vira um arquivo.
 if [ -n "$MYSQL_CA_CERT" ]; then
