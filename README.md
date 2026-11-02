@@ -143,9 +143,10 @@ precisa dele. Sem o `composer.lock` na `main`, o site online para de atualizar.
 
 ### 2.7 No servidor (Render + Aiven) — site no ar
 
-O sistema fica publicado em **https://facilmed.onrender.com** — **Render** (site, conta do Sidney)
-com o banco **MySQL no Aiven** (`facilmed-mysql`, Nova York). Os dois são grátis e nenhum pede
-cartão. **Cada push na `main` atualiza o site** em uns 5 minutos. Se o build der erro, a versão
+O sistema fica publicado em **https://pointmed.onrender.com** — **Render** (serviço `pointmed`,
+conta do projeto, desde 02/11/2026) com o banco **MySQL no Aiven** (`pointmed-mysql`, plano Free,
+conta do projeto). Os dois são grátis e nenhum pede cartão. O endereço antigo
+(facilmed.onrender.com, conta do Sidney) sai do ar depois da conferência da migração (§6, 02/11). **Cada push na `main` atualiza o site** em uns 5 minutos. Se o build der erro, a versão
 anterior continua no ar.
 
 **Como o push chega no Render:** o app do Render não está instalado na conta `cilugo` (dona do
@@ -182,7 +183,9 @@ Render é apagado depois de 30 dias.
    `cilugo/PointMed` (era `cilugo/FacilMed`; o GitHub redireciona o nome antigo. Se não aparecer, clique em
    *Configure GitHub* e libere o acesso). O Render lê o
    `render.yaml` e pede 3 valores:
-   - `APP_KEY`: a chave do Laravel (`base64:...`). Gerar: `php artisan key:generate --show`.
+   - `APP_KEY`: a chave do Laravel. Mais fácil (02/11/2026): em Environment → *Add variable* →
+     **Generated secret**, com o nome `APP_KEY` — o Render cria um valor aleatório e o `entrypoint.sh`
+     transforma em chave válida. Também serve uma `base64:...` de `php artisan key:generate --show`.
    - `DB_URL`: o *Service URI* do Aiven.
    - `MYSQL_CA_CERT`: o texto do certificado do Aiven.
    - `DEMO_PASSWORD`: a senha das contas de demonstração no site (mínimo 8, **nunca** `facilmed2026`).
@@ -443,6 +446,26 @@ conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no b
 
 > Esta seção é a "passagem de bastão" entre quem trabalha no projeto (pessoas e IAs).
 > **Atualize ao terminar cada etapa.**
+
+**Atualizado em 02/11/2026.**
+
+**02/11 — site migrado para a conta do projeto** (feito com o Claude, pedido do Sidney, seguindo o
+relatório "PointMed — Migrar o site para a conta do projeto").
+- **Novo endereço: https://pointmed.onrender.com** (serviço `pointmed`, Blueprint `pointmed`, conta do
+  projeto no Render). O `render.yaml` passou a se chamar `pointmed` (PR #7).
+- **Banco novo:** Aiven `pointmed-mysql`, plano **Free**, conta do projeto. **Recriado do zero** com os
+  dados de demonstração (o `entrypoint.sh` semeou o banco vazio). Os dados do banco antigo **não**
+  foram copiados (ninguém tinha acesso à conta antiga do Aiven); só se perdem contas criadas direto no site.
+- **Repositório no Render como "Public Git Repository":** o app do Render não pode ser instalado na
+  conta `cilugo` por um colaborador, então o Blueprint foi criado pelo link público. O deploy
+  automático continua pelo Deploy Hook + GitHub Actions (§2.7).
+- **APP_KEY:** o `entrypoint.sh` agora aceita uma APP_KEY sem `base64:` (ex.: "Generated secret" do
+  Render) e deriva dela uma chave de 32 bytes. Uma `base64:...` continua igual. Motivo: ninguém do
+  grupo precisa gerar nem colar a chave à mão (duas tentativas de colar falharam no dia).
+- **Brevo:** conta criada, remetente **PointMed <pointmedprojeto@gmail.com>** verificado. **Falta**
+  gerar a API key (o Brevo pede um código mandado ao e-mail da conta) e colocar em `BREVO_API_KEY`.
+- **Falta (com o Sidney):** trocar o segredo `RENDER_DEPLOY_HOOK` no GitHub pelo hook do serviço novo;
+  testar login com a `DEMO_PASSWORD`; depois disso, suspender o Render antigo e apagar o Aiven antigo.
 
 **Atualizado em 13/10/2026.**
 
