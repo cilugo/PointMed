@@ -199,6 +199,8 @@ Render é apagado depois de 30 dias.
   antes). Basta religar no painel.
 - O único e-mail do sistema é o de "Esqueci minha senha". Ele sai de verdade pelo Brevo só se
   `BREVO_API_KEY` e `MAIL_FROM_ADDRESS` estiverem preenchidos no Render; sem eles, vai para o log.
+  A conta Brevo só aceita envio de **IP autorizado** (Brevo → Security → Authorized IPs): se o log
+  mostrar `O Brevo recusou o e-mail (HTTP 401)`, autorize o IP novo do Render lá (§6, 02/11).
 - **Nunca** coloque senha do banco, `APP_KEY` ou `DEMO_PASSWORD` em arquivo do Git (nem no
   README, nem em mensagem de commit): elas ficam só no painel do Render.
 
@@ -450,22 +452,54 @@ conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no b
 **Atualizado em 02/11/2026.**
 
 **02/11 — site migrado para a conta do projeto** (feito com o Claude, pedido do Sidney, seguindo o
-relatório "PointMed — Migrar o site para a conta do projeto").
-- **Novo endereço: https://pointmed.onrender.com** (serviço `pointmed`, Blueprint `pointmed`, conta do
-  projeto no Render). O `render.yaml` passou a se chamar `pointmed` (PR #7).
-- **Banco novo:** Aiven `pointmed-mysql`, plano **Free**, conta do projeto. **Recriado do zero** com os
-  dados de demonstração (o `entrypoint.sh` semeou o banco vazio). Os dados do banco antigo **não**
-  foram copiados (ninguém tinha acesso à conta antiga do Aiven); só se perdem contas criadas direto no site.
-- **Repositório no Render como "Public Git Repository":** o app do Render não pode ser instalado na
-  conta `cilugo` por um colaborador, então o Blueprint foi criado pelo link público. O deploy
-  automático continua pelo Deploy Hook + GitHub Actions (§2.7).
-- **APP_KEY:** o `entrypoint.sh` agora aceita uma APP_KEY sem `base64:` (ex.: "Generated secret" do
-  Render) e deriva dela uma chave de 32 bytes. Uma `base64:...` continua igual. Motivo: ninguém do
-  grupo precisa gerar nem colar a chave à mão (duas tentativas de colar falharam no dia).
-- **Brevo:** conta criada, remetente **PointMed <pointmedprojeto@gmail.com>** verificado. **Falta**
-  gerar a API key (o Brevo pede um código mandado ao e-mail da conta) e colocar em `BREVO_API_KEY`.
-- **Falta (com o Sidney):** trocar o segredo `RENDER_DEPLOY_HOOK` no GitHub pelo hook do serviço novo;
-  testar login com a `DEMO_PASSWORD`; depois disso, suspender o Render antigo e apagar o Aiven antigo.
+relatório "PointMed — Migrar o site para a conta do projeto"). **Concluído e conferido no mesmo dia.**
+
+*O que ficou no ar*
+- **Endereço novo: https://pointmed.onrender.com** — serviço `pointmed` (Blueprint `pointmed`) no
+  Render da **conta do projeto**. O `render.yaml` passou a se chamar `pointmed` (PR #7). O endereço é
+  definido pelo nome do serviço; o antigo (facilmed.onrender.com, conta do Sidney) não mudou.
+- **Banco novo:** Aiven `pointmed-mysql`, plano **Free** (US$ 0, North America), conta do projeto.
+  Foi **recriado do zero**: no primeiro boot o `entrypoint.sh` viu o banco vazio e rodou os seeders
+  (as 9 contas da §3, médicos, convênios). Os dados do banco antigo **não** foram copiados — ninguém
+  do grupo tinha acesso à conta antiga do Aiven. Só se perdem contas criadas direto no site antigo.
+- **Repositório ligado como "Public Git Repository":** o app do Render só pode ser instalado na conta
+  `cilugo` pela dona dela; um colaborador não consegue. Como o repositório é público, o Blueprint
+  foi criado pelo link `https://github.com/cilugo/PointMed`. Consequência: o Render **não** publica
+  sozinho a cada push (ver "Falta" abaixo).
+- **APP_KEY sem ninguém colar:** a `APP_KEY` é um **Generated secret** do Render (Environment → Add
+  variable → Generated secret). O `entrypoint.sh` (PR #8) transforma um valor sem `base64:` numa
+  chave válida de 32 bytes (SHA-256). Uma `base64:...` continua funcionando igual (XAMPP, site antigo).
+  Motivo: na migração, duas tentativas de colar a chave à mão erraram o valor e o site deu erro 500
+  (`Unsupported cipher or incorrect key length`).
+- **Senha do banco:** a senha do `avnadmin` no Aiven foi **trocada** durante a migração, porque tinha
+  aparecido numa conversa. A que vale está só no `DB_URL` do Render.
+- **E-mail ("Esqueci minha senha") funcionando:** conta Brevo do projeto (login:
+  facilmedprojeto@gmail.com), remetente **PointMed <pointmedprojeto@gmail.com>** verificado, chave de
+  API `pointmed-render` **restrita a "Transactional email"**, no `BREVO_API_KEY` do Render. Teste do
+  dia: e-mail "PointMed — troca de senha" **entregue** em pointmedprojeto@gmail.com.
+- ⚠ **IP autorizado no Brevo:** a conta Brevo só aceita envio de IP autorizado (Security → Authorized
+  IPs). O primeiro envio foi recusado (`HTTP 401 ... unrecognised IP address`) e o IP do Render
+  (`74.220.49.7`) foi autorizado. **Se o e-mail parar de chegar**, procure no log do Render
+  `O Brevo recusou o e-mail (HTTP 401)` e autorize o IP novo em "Unauthorized IP addresses". Não
+  desligue o bloqueio: ele impede que a chave seja usada fora do Render.
+- **Conferido no site novo:** home, busca por cidade (6 locais), as 6 páginas de local, busca de
+  médicos, login, cadastro de clínica, "Esqueci minha senha" — todos 200, links apontando para
+  pointmed.onrender.com. Log do boot: migrations ok, `contas de demonstração protegidas` (a
+  `DEMO_PASSWORD` vale; `facilmed2026` não), `ADMIN_EMAIL` vazio (sem admin extra, de propósito).
+
+*Variáveis do Render (só os nomes — valores ficam no painel):* `APP_KEY` (Generated secret),
+`DB_URL`, `MYSQL_CA_CERT`, `DEMO_PASSWORD`, `BREVO_API_KEY`, `MAIL_FROM_ADDRESS`
+(pointmedprojeto@gmail.com) e as fixas do `render.yaml`.
+
+*Falta (nada disso afeta o site no ar)*
+1. **Deploy automático:** o segredo `RENDER_DEPLOY_HOOK` do GitHub ainda é o hook do serviço
+   **antigo** — hoje cada push na `main` republica o facilmed.onrender.com, não o novo. Trocar pelo hook
+   do serviço `pointmed` (Render → pointmed → Settings → Deploy Hook). Até lá, publicar o novo em
+   Render → pointmed → **Manual Deploy → Deploy latest commit**.
+2. **Desligar o antigo** (conta do Sidney): suspender o Render `facilmed` e apagar o Aiven
+   `facilmed-mysql`; revogar a chave antiga do Brevo, se houver.
+3. Avisar banca e grupo do link novo. Lembrete: o plano grátis dorme após 15 min; abrir o site
+   ~2 min antes de apresentar.
 
 **Atualizado em 13/10/2026.**
 
