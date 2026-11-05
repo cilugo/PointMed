@@ -28,4 +28,4 @@ jobs:
             exit 1
           fi
           curl -fsS -X POST "$HOOK" > /dev/null
-          echo "Render avisado. O site atualiza em uns 2-5 minutos: https://facilmed.onrender.com"
+          echo "Render avisado. O site atualiza em uns 2-5 minutos: https://pointmed.onrender.com"

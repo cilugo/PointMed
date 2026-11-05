@@ -77,7 +77,7 @@ return [
     | Nos testes fica DESLIGADO (phpunit.xml): teste não fala com a internet.
     */
     'servico_externo' => env('LOCALIZACAO_EXTERNA', true),
-    'user_agent'      => 'PointMed/1.0 (TCC Etec Ilza Nascimento Pintus; https://facilmed.onrender.com)',
+    'user_agent'      => 'PointMed/1.0 (TCC Etec Ilza Nascimento Pintus; https://pointmed.onrender.com)',
     'timeout'         => 6,
 
 ];

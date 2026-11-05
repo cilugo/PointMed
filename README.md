@@ -146,7 +146,7 @@ precisa dele. Sem o `composer.lock` na `main`, o site online para de atualizar.
 O sistema fica publicado em **https://pointmed.onrender.com** — **Render** (serviço `pointmed`,
 conta do projeto, desde 02/11/2026) com o banco **MySQL no Aiven** (`pointmed-mysql`, plano Free,
 conta do projeto). Os dois são grátis e nenhum pede cartão. O endereço antigo
-(facilmed.onrender.com, conta do Sidney) sai do ar depois da conferência da migração (§6, 02/11). **Cada push na `main` atualiza o site** em uns 5 minutos. Se o build der erro, a versão
+(facilmed.onrender.com, conta do Sidney) sai do ar depois da conferência da migração (§6, 02/11). **Cada push na `main` atualiza o site** em uns 5 minutos — ⚠ só depois que o segredo `RENDER_DEPLOY_HOOK` do GitHub tiver o hook do serviço `pointmed` (§6, pendências); até lá, o push atualiza o site antigo e o novo se publica em Render → pointmed → **Manual Deploy**. Se o build der erro, a versão
 anterior continua no ar.
 
 **Como o push chega no Render:** o app do Render não está instalado na conta `cilugo` (dona do
@@ -213,7 +213,7 @@ recriadas já nascem com a `DEMO_PASSWORD`.
 ## 3. Contas e dados de teste
 
 **Senha de todas as contas: `facilmed2026`** — na sua máquina (XAMPP) e nos testes.
-**No site no ar (facilmed.onrender.com) a senha é outra:** a `DEMO_PASSWORD` do Render, que fica só
+**No site no ar (pointmed.onrender.com) a senha é outra:** a `DEMO_PASSWORD` do Render, que fica só
 com o grupo (§2.7). Nunca escreva essa senha aqui.
 
 | Tipo | E-mail | Observação |
@@ -449,7 +449,22 @@ conta, segurança, "Esqueci minha senha", travas do banco e as telas. Rodam no b
 > Esta seção é a "passagem de bastão" entre quem trabalha no projeto (pessoas e IAs).
 > **Atualize ao terminar cada etapa.**
 
-**Atualizado em 02/11/2026.**
+**Atualizado em 05/11/2026.**
+
+**05/11 — revisão geral depois da migração** (feito com o Claude, pedido do Sidney: "revisa todo o
+projeto"). Conferido: `migrate:fresh --seed` limpo e **173 testes** passando (MariaDB, PHP 8.3); nenhuma
+tela com "FacilMed", "paciente" ou "validado"; toda rota que grava dado tem login ou `throttle` (o login
+usa o limitador do Breeze); `/storage/...` devolve 403 sem link assinado.
+- Esta seção (registro da migração de 02/11, que estava só na branch `docs/migracao-conta-projeto`)
+  entrou na `main`.
+- O link antigo saiu de onde ainda aparecia: mensagem do `deploy-render.yml`, `user_agent` do
+  Nominatim (`config/localizacao.php`), comentário do `entrypoint.sh`, §2.7 e §3.
+- **Continua pendente** (não dá para fazer pelo código): o item 1 do "Falta" abaixo — o
+  `RENDER_DEPLOY_HOOK` ainda é o do site antigo. Este commit publicou no facilmed.onrender.com; o
+  pointmed.onrender.com só pega este commit por **Manual Deploy** (as mudanças são de texto, nada de
+  tela muda).
+
+**02/11/2026.**
 
 **02/11 — site migrado para a conta do projeto** (feito com o Claude, pedido do Sidney, seguindo o
 relatório "PointMed — Migrar o site para a conta do projeto"). **Concluído e conferido no mesmo dia.**
@@ -504,7 +519,7 @@ relatório "PointMed — Migrar o site para a conta do projeto"). **Concluído e
 **Atualizado em 13/10/2026.**
 
 **Pendências até a entrega (12/10, depois da revisão geral):**
-1. **⚠ Site no ar sem senha de demonstração.** O log do boot de 12/10 diz que a `DEMO_PASSWORD` está
+1. *(Resolvido no site novo, 02/11: a `DEMO_PASSWORD` está preenchida.)* **⚠ Site no ar sem senha de demonstração.** O log do boot de 12/10 diz que a `DEMO_PASSWORD` está
    vazia no Render: as 9 contas do seed (admin, 6 clínicas, Ana, Marcos) ficaram com senha aleatória e
    ninguém entra nelas; o `ADMIN_EMAIL` também está vazio (não há admin extra). Criar a `DEMO_PASSWORD`
    no painel do Render (Environment) e publicar de novo (aba Actions → **Run workflow**). Conferir

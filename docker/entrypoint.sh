@@ -9,7 +9,7 @@ sed -ri "s/^Listen .*/Listen ${PORT}/" /etc/apache2/ports.conf
 sed -ri "s/<VirtualHost \*:[0-9]+>/<VirtualHost *:${PORT}>/" /etc/apache2/sites-available/000-default.conf
 
 # Endereço do site: se ninguém definiu APP_URL, usa o que o Render criou
-# (ex.: https://facilmed.onrender.com). Vai nos links dos e-mails.
+# (ex.: https://pointmed.onrender.com). Vai nos links dos e-mails.
 export APP_URL="${APP_URL:-$RENDER_EXTERNAL_URL}"
 
 # 1b. (02/11/2026) APP_KEY. O Laravel quer "base64:" + 32 bytes. Na conta do projeto a

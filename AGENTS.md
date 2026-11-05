@@ -7,7 +7,7 @@
 > telas — está no `README.md`.** Leia o README (principalmente §4, §5 e §6) antes de editar.
 > Se algo aqui conflitar com outro arquivo, **este vence**.
 >
-> Última revisão: 13/10/2026 (galeria de fotos e site da unidade, §1/§3/§5; admin com três telas de contas). Antes, 12/10/2026 (unidade: a clínica edita e desativa, §3). Antes, 05/10/2026 (notas do Lucas): o projeto se chama **PointMed** (era FacilMed);
+> Última revisão: 05/11/2026 (site novo: pointmed.onrender.com, conta do projeto; README §2.7 e §6). Antes, 13/10/2026 (galeria de fotos e site da unidade, §1/§3/§5; admin com três telas de contas). Antes, 12/10/2026 (unidade: a clínica edita e desativa, §3). Antes, 05/10/2026 (notas do Lucas): o projeto se chama **PointMed** (era FacilMed);
 > quem busca clínicas é o **usuário** (não "paciente"); a faixa de preço é escolhida pela clínica em
 > cada unidade; o comentário das avaliações é público. Antes, em 01/10/2026: o projeto deixou de
 > agendar consultas e o médico deixou de ter conta.
